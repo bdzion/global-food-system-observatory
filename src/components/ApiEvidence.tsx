@@ -12,6 +12,7 @@ const fmt=(v:number|null|undefined)=>v==null?"Unknown":new Intl.NumberFormat("en
 export function ApiEvidence({release,geo,commodity,compact}:{release:Release;geo:string;commodity:string;compact:boolean}){
  const [data,setData]=useState<Evidence|null>(null),[err,setErr]=useState(""),[site,setSite]=useState(""),[country,setCountry]=useState(""),[market,setMarket]=useState(0),[show,setShow]=useState(!compact);
  useEffect(()=>{if(!hasFile(release.manifest,"api-evidence.json"))return;let stop=false;readVerified<Evidence>(release.manifest,"api-evidence.json").then(v=>{if(!stop)setData(v)}).catch(e=>{if(!stop)setErr(String(e))});return()=>{stop=true}},[release.manifest]);
+ useEffect(()=>{setMarket(0);setCountry("");setSite("")},[geo,commodity]);
  if(!data)return <section className="visual-panel"><h2>Climate and domestic market intelligence</h2><p>{err?"Evidence could not be loaded: "+err:hasFile(release.manifest,"api-evidence.json")?"Loading API evidence…":"This validated snapshot predates the new API feeds. No observations are inferred."}</p></section>;
  const {enso,climate,domestic}=data;
  const sites=climate.sites.filter(s=>geo==="global"||s.iso3===geo);

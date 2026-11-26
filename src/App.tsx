@@ -59,7 +59,7 @@ export function App() {
 
   return (
     <>
-      <a className="skip" href="#content">
+      <a className="skip" href="#content" onClick={e=>{e.preventDefault();document.getElementById("content")?.focus();document.getElementById("content")?.scrollIntoView()}}>
         Skip to the main content
       </a>
 
@@ -75,7 +75,7 @@ export function App() {
               {NAV.map((item) => (
                 <li key={item.page}>
                   <a
-                    href={href(item.page,undefined,(()=>{try{const saved=JSON.parse(localStorage.getItem("gfso.commodity-context.v1")||"{}");return {commodity:saved.commodity||route.query.get("commodity")||"all",geo:saved.geo||route.query.get("geo")||"global"}}catch{return {} as Record<string,string>}})())}
+                    href={href(item.page,undefined,(()=>{try{const saved=JSON.parse(localStorage.getItem("gfso.commodity-context.v1")||"{}");return {commodity:route.query.get("commodity")||saved.commodity||"all",geo:route.query.get("geo")||saved.geo||"global"}}catch{return {} as Record<string,string>}})())}
                     aria-current={active === item.page ? "page" : undefined}
                   >
                     {item.label}
@@ -86,9 +86,9 @@ export function App() {
           </nav>
         </div>
       </header>
-      <div className="data-strip" role="status"><div>{state.status==="ready"?<><span>Release <strong>{state.release.manifest.release_id}</strong></span><span>Built {dateWords(state.release.manifest.generated_at_utc)}</span><span>{state.release.sources.sources.filter(s=>!s.older_than_expected && s.provider_updated).length} of {state.release.sources.sources.length} published sources within expected age</span></>:<span>Data {state.status==="loading"?"loading":"unavailable"}</span>}<span>Research tool · not an official warning service</span></div></div>
+      <div className="data-strip" role="status"><div>{state.status==="ready"?<><span>Release <strong>{state.release.manifest.release_id}</strong></span><span>Built {dateWords(state.release.manifest.generated_at_utc)}</span><span>{state.release.sources.sources.filter(s=>!s.older_than_expected && s.provider_updated).length} of {state.release.sources.sources.length} core sources within expected age</span></>:<span>Data {state.status==="loading"?"loading":"unavailable"}</span>}<span>Research tool · not an official warning service</span></div></div>
 
-      <main id="content">
+      <main id="content" tabIndex={-1}>
         {state.status === "loading" ? (
           <p aria-live="polite">Loading the latest figures…</p>
         ) : null}

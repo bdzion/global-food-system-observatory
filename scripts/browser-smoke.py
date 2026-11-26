@@ -26,6 +26,12 @@ with sync_playwright() as p:
         page.get_by_role("link",name="Watch",exact=True).click()
         page.get_by_role("heading",name="Signals and decision opportunities",exact=True).wait_for(timeout=30000)
         assert page.get_by_role("combobox",name="Country",exact=True).input_value()=="BGD"
+        page.goto(URL+"#/briefs?commodity=rice&geo=BGD",wait_until="domcontentloaded")
+        page.get_by_role("heading",name="Decision desk",exact=True).wait_for(timeout=30000)
+        page.get_by_role("button",name="Download evidence brief").wait_for(timeout=30000)
+        with page.expect_download() as download:
+            page.get_by_role("button",name="Download evidence brief").click()
+        assert download.value.suggested_filename.startswith("gfso-brief-BGD-rice-")
         assert not errors,errors
         page.close()
     browser.close()

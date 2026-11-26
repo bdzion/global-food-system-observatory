@@ -117,7 +117,8 @@ def parse_market_csv(raw,now):
         period=f"{d.year:04}M{d.month:02}"
         bucket=series.setdefault(key,{})
         # Conflicting same-market monthly entries are not averaged or overwritten.
-        if period in bucket and bucket[period]!=v:bucket[period]=None
+        if period in bucket:
+            if bucket[period]!=v:bucket[period]=None
         else:bucket[period]=v
     rows=[]
     for (product,commodity,admin,market_id,market,unit,currency),p in series.items():
