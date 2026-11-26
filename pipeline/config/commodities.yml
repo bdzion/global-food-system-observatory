@@ -24,3 +24,81 @@ commodities:
     name: Soybeans
     item_code: "236"
     role: Oilseed and feed processing; excludes oil and meal
+
+  # Exact product forms. These are candidate mappings until the real
+  # FAOSTAT SCL/TM release is checked. Do not aggregate processed and raw forms.
+  barley:
+    name: Barley
+    item_code: "44"
+    group: staples
+    role: Food, feed and industrial uses
+  sorghum:
+    name: Sorghum
+    item_code: "83"
+    group: staples
+    role: Climate-resilient staple and feed
+  millet:
+    name: Millet
+    item_code: "79"
+    group: staples
+    role: Regional staple and dryland crop
+  palm_oil:
+    name: Palm oil
+    item_code: "257"
+    group: oils
+    role: Edible oil and industrial uses; excludes palm fruit
+  soybean_oil:
+    name: Soybean oil
+    item_code: "237"
+    group: oils
+    role: Edible oil; excludes whole soybeans and meal
+  rapeseed:
+    name: Rapeseed / canola seed
+    item_code: "270"
+    group: oils
+    role: Oilseed and feed processing; excludes refined oil
+  sunflower_seed:
+    name: Sunflower seed
+    item_code: "267"
+    group: oils
+    role: Oilseed; excludes sunflower oil
+  dry_beans:
+    name: Dry beans
+    item_code: "176"
+    group: pulses
+    role: Staple and plant protein
+  chickpeas:
+    name: Chickpeas
+    item_code: "191"
+    group: pulses
+    role: Plant protein and regional food security
+  lentils:
+    name: Lentils
+    item_code: "201"
+    group: pulses
+    role: Plant protein and regional food security
+  chicken:
+    name: Chicken meat
+    item_code: "1058"
+    group: animal
+    role: Animal protein; excludes live animals
+  eggs:
+    name: Hen eggs in shell
+    item_code: "1062"
+    group: animal
+    role: Animal protein; disease and feed exposure
+  tomatoes:
+    name: Tomatoes
+    item_code: "388"
+    group: fresh
+    role: Perishable horticultural product
+  bananas:
+    name: Bananas
+    item_code: "486"
+    group: fresh
+    role: Perishable fruit and export supply chains
+  apples:
+    name: Apples
+    item_code: "515"
+    group: fresh
+    role: Perishable fruit and storage-dependent supply

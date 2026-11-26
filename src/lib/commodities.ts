@@ -35,6 +35,7 @@ export interface Commodity {
   name: string;
   role: string;
   item_code: string;
+  group?: string;
   year: number | null;
   status: string;
   countries: Record<string, CommodityProfile>;
