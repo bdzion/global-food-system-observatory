@@ -1,0 +1,22 @@
+name: API provider smoke test
+on:
+  pull_request:
+    paths:
+      - "pipeline/gfso/api_evidence.py"
+      - ".github/workflows/api-smoke.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r pipeline/requirements.txt
+      - name: Check public provider responses
+        working-directory: pipeline
+        run: python -m gfso.api_evidence
