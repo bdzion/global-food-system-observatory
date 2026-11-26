@@ -139,3 +139,12 @@ def test_two_different_source_figures_keep_neither_and_report_it():
         entry[field] = value
     assert entry["production"] is None
     assert entry["conflicts"] == ["production"]
+
+
+def test_perishable_food_has_no_grain_style_stock_cover():
+    balance = {"2023|AAA": {"production": 100, "imports": 100, "exports": 0, "opening_stocks": 60, "flags": {}}}
+    trade = {"reported": {}, "mirrored": {}, "flags": {}}
+    row = commodities.profile("AAA", 2023, balance, trade, perishable=True)
+    assert row["opening_stocks_t"] is None
+    assert row["estimated_cover_months"] is None
+    assert "perishable" in row["stock_note"]
