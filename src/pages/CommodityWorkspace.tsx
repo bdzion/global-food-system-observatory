@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ShipmentTimeline } from "../components/ShipmentTimeline";
 import { IndicatorGuide } from "../components/ReaderGuide";
 import { CompoundLab } from "../components/CompoundLab";
 import { WorldEvidenceMap, RankedBars, PriceTrend, CountryTrends, SupplierNetwork, ExposurePlot } from "../components/EvidenceVisuals";
@@ -79,7 +80,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
   }
 
   if (result.kind === "loading") return <p role="status">Loading commodity evidence…</p>;
-  if (result.kind === "legacy") return <section className="commodity-panel"><h2>These figures have not been published yet</h2><p>This release covers wheat only. Nothing is shown for the other crops, because we would be making it up.</p><a href={href("wheat")}>Open original wheat evidence</a></section>;
+  if (result.kind === "legacy") return <section className="commodity-panel"><h2>These figures have not been published yet</h2><p>This update covers wheat only. Figures for other foods are not available.</p><a href={href("wheat")}>Open original wheat evidence</a></section>;
   if (result.kind === "error") return <section className="commodity-panel"><h2>The crop figures could not be loaded</h2><p role="alert">Nothing is being shown rather than a page that looks empty. Reason given: {result.message}</p><a href={href("home")}>Go to the front page</a></section>;
   if(result.selection!==selected||result.compound!==compound)return <p role="status">Loading selected commodity evidence…</p>;
   const { products, sources, provider_updated, method } = result.data;
@@ -125,14 +126,14 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
       <h2>Foods covered</h2>
       <p className="figure-note">We have country figures for {publishedCount} food products. Select a group or food to explore it.</p>
       <div className="product-groups" aria-label="Filter product catalogue">{groups.map(([id,label])=><button key={id} className="visual-button" aria-pressed={group===id} onClick={()=>setGroup(id)}>{label}</button>)}</div>
-      {visibleProducts.length===0&&<p role="status">No validated data for this group in this release. This is a coverage gap, not an indication that the group has no production or trade. See Data &amp; Methods for planned sources.</p>}
+      {visibleProducts.length===0&&<p role="status">Figures are unavailable for this group. This does not mean there is no production or trade. See Sources &amp; methods.</p>}
       <div className="commodity-grid">{visibleProducts.map(([id,p]) => <article className="commodity-panel" key={id}>
         <h3>{p.name}</h3><p>{p.role}</p><p><strong>{Object.keys(p.countries).length}</strong> country records · {p.year ?? "no year"}</p>
         <p>{p.price ? <>{p.price.plain_name}: {number(p.price.latest_value, 1)} {p.price.unit} ({monthWords(p.price.latest_period)} · {priceAge(p.price.latest_period)})</> : "No international reference price available"}</p>
         <a href={href("commodities", undefined, {commodity:id, geo})}>Explore {p.name.toLowerCase()}</a>
       </article>)}</div>
       <h2>Shared pressures: energy and fertilizer</h2><div className="commodity-grid">{Object.values(release.world.prices).filter(p => ["urea_price","dap_price","potash_price","oil_price","gas_price"].includes(p.id)).map(p => <article className="commodity-panel" key={p.id}><h3>{p.plain_name}</h3><strong>{number(p.latest_value,1)} {p.unit}</strong><p>{monthWords(p.latest_period)} · {percent(p.change_over_year_pct)} different from a year earlier</p></article>)}</div>
-      <p className="figure-note">These are world reference prices. They are not the price any particular farmer or buyer paid, and a rise here reaches a harvest months later, not this week.</p>
+      <p className="figure-note">These are international reference prices, not the price a particular farmer paid. The size and timing of any effect on harvests depend on local costs and planting decisions.</p>
     </>}
     {(mode === "overview" || mode === "explore") && <>
       <PriceTrend price={product.price}/>
@@ -165,24 +166,25 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
     </>}
     
     {mode === "stress" && <>
-      <p className="commodity-warning"><strong>Scenario only.</strong> Uses historical annual bilateral flows, prorated evenly across months; does not model seasonality, prices, hunger or accessible stocks. An absent flow is unknown, not zero.</p>
+      <p className="commodity-warning"><strong>Scenario, not a forecast.</strong> Past annual shipments are spread evenly across months. Actual shipping schedules, prices, household food access and usable stocks are not predicted. Missing trade figures are not zero.</p>
       {geo === "global" || !profile || !actualSupplier ? <p>Select a country with observed suppliers to explore a shipment interruption.</p> : <>
-        <label>Which supplier is interrupted<select value={actualSupplier.iso3} onChange={e=>setSupplier(e.target.value)}>{profile.suppliers.map(s=><option key={s.iso3} value={s.iso3}>{s.name}</option>)}</select></label>
+        <label>Which supplier stops or reduces shipments?<select value={actualSupplier.iso3} onChange={e=>setSupplier(e.target.value)}>{profile.suppliers.map(s=><option key={s.iso3} value={s.iso3}>{s.name}</option>)}</select></label>
         <div className="commodity-grid commodity-controls">
-          <label>How much of its shipments stop: {stop}%<input type="range" min="0" max="100" step="5" value={stop} onChange={e=>setStop(+e.target.value)}/></label>
+          <label>Share of shipments lost: {stop}%<input type="range" min="0" max="100" step="5" value={stop} onChange={e=>setStop(+e.target.value)}/></label>
           <label>For how long: {months} months<input type="range" min="1" max="12" value={months} onChange={e=>setMonths(+e.target.value)}/></label>
-          <label>How much can be bought elsewhere: {replacement}%<input type="range" min="0" max="100" step="5" value={replacement} onChange={e=>setReplacement(+e.target.value)}/></label>
-          <label>Alternative supplier capacity (% of affected baseline): {capacity}%<input type="range" min="0" max="100" step="5" value={capacity} onChange={e=>setCapacity(+e.target.value)}/></label>
-          <label>Months before anyone acts: {delay} months<input type="range" min="0" max="12" value={delay} onChange={e=>setDelay(+e.target.value)}/></label>
+          <label>Share of lost shipments to replace: {replacement}%<input type="range" min="0" max="100" step="5" value={replacement} onChange={e=>setReplacement(+e.target.value)}/></label>
+          <label>Maximum alternative supply (% of normal shipments from affected supplier): {capacity}%<input type="range" min="0" max="100" step="5" value={capacity} onChange={e=>setCapacity(+e.target.value)}/></label>
+          <label>Months before replacement begins: {delay} months<input type="range" min="0" max="12" value={delay} onChange={e=>setDelay(+e.target.value)}/></label>
         </div>
-        <label className="commodity-check"><input type="checkbox" checked={compound} onChange={e=>setCompound(e.target.checked)}/> Apply the same supplier disruption to other selected product forms as independent scenarios (not summed; rice forms never added together)</label>
-        <div className="commodity-table"><table><caption>{nameFor(profile)} · conditional shipment gaps, metric tonnes; different products are not summed</caption><thead><tr><th>Commodity / year</th><th>Reporting basis</th><th>No action</th><th>Early action</th><th>Delayed action</th></tr></thead><tbody>{scenarioRows.map(s=><tr key={s.id}><th scope="row">{s.name} · {s.year ?? "unknown"}</th><td>{s.flow == null ? "Unknown" : s.basis?.replaceAll("_"," ")}</td><td>{t(s.early?.gross)}</td><td>{t(s.early?.residual)}</td><td>{t(s.late?.residual)}</td></tr>)}</tbody></table></div>
+        <label className="commodity-check"><input type="checkbox" checked={compound} onChange={e=>setCompound(e.target.checked)}/> Also test the same interruption for other foods. Results are calculated separately and are not added together.</label>
+        <div className="commodity-table"><table><caption>{nameFor(profile)} · possible unfilled shipments (tonnes); foods shown separately</caption><thead><tr><th>Commodity / year</th><th>Reporting basis</th><th>No action</th><th>Early action</th><th>Delayed action</th></tr></thead><tbody>{scenarioRows.map(s=><tr key={s.id}><th scope="row">{s.name} · {s.year ?? "unknown"}</th><td>{s.flow == null ? "Unknown" : s.basis?.replaceAll("_"," ")}</td><td>{t(s.early?.gross)}</td><td>{t(s.early?.residual)}</td><td>{t(s.late?.residual)}</td></tr>)}</tbody></table></div>
         {scenarioRows.map(s=>s.early&&s.late?<RankedBars key={s.id} title={s.name+" — remaining shipment gap"} unit="t" rows={[{id:"none",name:"No action",value:s.early.gross},{id:"early",name:"Early action",value:s.early.residual},{id:"late",name:"Delayed action",value:s.late.residual}]}/>:null)}
         <p className="figure-note">Early action assumes replacement begins immediately; delayed action starts after the selected lead time. Replacement is capped by the assumed alternative supplier capacity and available time; competing buyers and seasonal availability are not modelled. No aggregation or substitution across products is inferred.</p>
+        <ShipmentTimeline annualFlow={actualSupplier.quantity_t} stop={stop} months={months} replacement={replacement} delay={delay} capacity={capacity}/>
         <CompoundLab key={key+":"+geo+":"+actualSupplier.iso3} profile={profile} supplier={actualSupplier}/>
-        <h3>What officials and importers should check</h3><div className="commodity-grid"><article className="commodity-panel"><strong>Importers</strong><p>Check alternative suppliers' exportable surplus, financing and transit time before purchasing.</p></article><article className="commodity-panel"><strong>Government</strong><p>Independently verify accessible reserves and assess targeted affordability support. Consider displacement of other buyers.</p></article></div>
+        <h3>What officials and importers should check</h3><div className="commodity-grid"><article className="commodity-panel"><strong>Importers</strong><p>Check how much other suppliers can sell, how to pay for it and when it could arrive.</p></article><article className="commodity-panel"><strong>Government</strong><p>Check which stocks can actually be released, whether families need help buying food, and whether buying elsewhere would leave other countries short.</p></article></div>
       </>}
-      <p><a href={href("what-if")}>The wheat what-if test, which also names who else would be bidding</a></p>
+      <p><a href={href("what-if")}>Detailed wheat scenario, including other buyers</a></p>
     </>}
     
     {geo!=="global"&&mode==="explore"&&<p><a href={href("watch",undefined,{commodity:key,geo})}>Next: The threats →</a> · <a href={href("briefs",undefined,{commodity:key,geo})}>Country brief →</a></p>}

@@ -28,13 +28,13 @@ export function SourceAtlas({release}: {release:Release}) {
   const groups=["All",...new Set(SOURCES.map(s=>s[0]))];
   const rows=SOURCES.filter(s=>(group==="All"||s[0]===group)&&s.join(" ").toLowerCase().includes(query.toLowerCase()));
   return <section className="visual-panel">
-    <p className="commodity-kicker">Evidence infrastructure</p><h2>Data sources and coverage</h2>
-    <p>Published release: {release.manifest.release_id}. External references are not connected feeds.</p>
+    <p className="commodity-kicker">Sources of information</p><h2>Data sources and coverage</h2>
+    <p>Published release: {release.manifest.release_id}. Reference links are provided for further reading; not all supply data to this site.</p>
     <div className="source-grid">{release.sources.sources.map(s=><article className="source-tile" key={s.id}><span className="source-status">{s.older_than_expected?"Older than expected":"Published source"}</span><h3><a href={s.documentation_url}>{s.provider}</a></h3><p>{s.plain_name||s.dataset}</p><small>Provider update: {s.provider_updated||"Unknown"} · {s.expected_frequency}</small><p className="figure-note">{s.caveat}</p></article>)}</div>
-    <h3>International evidence directory</h3><p>Use these authoritative sources for additional context. Automated ingestion and redistribution require separate validation.</p>
+    <h3>International evidence directory</h3><p>Use these authoritative sources for additional context. We need to check access, accuracy and permission before adding their figures.</p>
     <div className="commodity-filter"><label>Domain<select value={group} onChange={e=>setGroup(e.target.value)}>{groups.map(g=><option key={g}>{g}</option>)}</select></label><label>Find a source<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="e.g. climate, stocks, nutrition"/></label></div>
     <div className="source-grid">{rows.map(s=><article className="source-tile" key={s[1]}><span className="source-status reference">{s[4]}</span><h3><a href={s[2]}>{s[1]}</a></h3><p>{s[3]}</p><p className="figure-note">{s[5]}</p></article>)}</div>{!rows.length&&<p>No sources match.</p>}
-    <p className="figure-note">New data must pass access, schema, provenance, redistribution and validation gates before publication.</p>
+    <p className="figure-note">We check where figures come from, whether we can use them and whether they are consistent before publishing.</p>
   </section>;
 }
 const PATHWAYS=[
@@ -45,5 +45,5 @@ const PATHWAYS=[
   ["Perishable food → cold chain","Fruit / vegetables / animal foods","Storage and transport","Spoilage and local availability","Temperature control, electricity, transit time and product shelf life."],
 ];
 export function SystemPathways(){
-  return <section className="visual-panel"><p className="commodity-kicker">Systems thinking</p><h2>How disruptions can spread</h2><p>Conceptual pathways, not estimated causal effects. Expand each pathway to see the constraints that must be tested before modelling substitution.</p><div className="pathway-grid">{PATHWAYS.map(p=><details className="source-tile" key={p[0]}><summary>{p[0]}</summary><div className="pathway-flow"><span>{p[1]}</span><b aria-hidden="true">→</b><span>{p[2]}</span></div><p><strong>Potential consequence:</strong> {p[3]}</p><p className="figure-note">{p[4]}</p></details>)}</div></section>;
+  return <section className="visual-panel"><p className="commodity-kicker">Connections in the food system</p><h2>How disruptions can spread</h2><p>These examples show how one problem might affect another part of the system. Open each example to see what needs to be checked. They are not measured effects.</p><div className="pathway-grid">{PATHWAYS.map(p=><details className="source-tile" key={p[0]}><summary>{p[0]}</summary><div className="pathway-flow"><span>{p[1]}</span><b aria-hidden="true">→</b><span>{p[2]}</span></div><p><strong>Potential consequence:</strong> {p[3]}</p><p className="figure-note">{p[4]}</p></details>)}</div></section>;
 }

@@ -56,12 +56,9 @@ export function HowItWorks({ release }: { release: Release }) {
 
   return (
     <>
-      <h1>How this works</h1>
+      <h2>How the original wheat calculations work</h2>
       <p className="lede">
-        Everything on this site is built from figures other people publish. This
-        page says which, how old they are, what they cover and what they leave
-        out. If a number here cannot be traced back to one of these, it should
-        not be on the site.
+        This section explains the original wheat calculations, which remain available for comparison. The broader site also includes other foods, local prices, weather and reported hazards.
       </p>
 
       <h2>In one paragraph</h2>
@@ -78,7 +75,7 @@ export function HowItWorks({ release }: { release: Release }) {
 
       <h2>Where the figures come from</h2>
       <DataTable
-        caption="Every source behind this site. A source marked older than we expect has not been updated as often as its publisher normally updates it — which may mean a delay at their end, or a problem at ours."
+        caption="Main sources behind the original calculations. A source marked older than we expect has not been updated as often as its publisher normally updates it — which may mean a delay at their end, or a problem at ours."
         columns={columns}
         rows={sources.sources}
         rowKey={(s) => s.id}
@@ -102,15 +99,10 @@ export function HowItWorks({ release }: { release: Release }) {
           does not have.
         </li>
         <li>
-          <strong>It does not cover whole links of the chain.</strong> How crops
-          are doing in the ground, and whether grain can physically move, both
-          have nothing watching them here. They are marked that way everywhere
-          they appear.
+          <strong>It does not cover whole links of the chain.</strong> The original wheat calculations do not measure crop conditions or actual movement of grain. Other pages provide weather and crop-report context, but these gaps remain.
         </li>
         <li>
-          <strong>It is not current for most things.</strong> Only the price
-          figures are monthly. Trade, stocks and diet costs are published once a
-          year and arrive about a year late.
+          <strong>It is not current for most things.</strong> Prices and some weather data are monthly. Many trade, stock and diet figures are annual and arrive much later.
         </li>
       </ul>
 

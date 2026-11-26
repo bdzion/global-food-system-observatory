@@ -1,0 +1,12 @@
+import {shipmentTimeline} from "../lib/commodities";
+import {SeriesChart} from "./EvidenceVisuals";
+export function ShipmentTimeline({annualFlow,stop,months,replacement,delay,capacity}:{annualFlow:number;stop:number;months:number;replacement:number;delay:number;capacity:number}){
+ const points=shipmentTimeline(annualFlow,stop,months,replacement,delay,capacity), last=points.at(-1)!;
+ const fmt=(v:number)=>new Intl.NumberFormat("en",{maximumFractionDigits:0}).format(v);
+ return <section className="visual-panel"><h2>How the shortfall could build over time</h2><p>Month 0 is the assumed start of the interruption, not a calendar date or forecast. The lines show how much of the affected shipment remains unfilled as time passes. They do not show national food shortages.</p>
+ <div className="timeline-steps"><article><strong>Month 0</strong><p>Check the interruption, usable stocks and replacement suppliers.</p></article><article><strong>Month {delay}</strong><p>{delay>=months?"The delayed response begins at or after the end of this test.":"In the delayed case, replacement shipments begin after this point."}</p></article><article><strong>Month {months}</strong><p>Compare remaining gaps and reassess the assumptions.</p></article></div>
+ <SeriesChart title="Cumulative unfilled shipments" unit="tonnes" series={([{key:"none",name:"No action"},{key:"early",name:"Early action"},{key:"late",name:"Delayed action"}] as const).map(s=>({name:s.name,points:points.map(p=>({period:String(p.month).padStart(2,"0"),value:p[s.key]}))}))}/>
+ <p><strong>By month {months}:</strong> acting at the start rather than waiting {delay} months could leave {fmt(last.late-last.early)} fewer tonnes unfilled under your assumptions.</p>
+ <details><summary>Monthly figures (tonnes)</summary><div className="commodity-table"><table><caption>Hypothetical cumulative unfilled shipments</caption><thead><tr><th>Month</th><th>No action</th><th>Early action</th><th>Delayed action</th></tr></thead><tbody>{points.map(p=><tr key={p.month}><th scope="row">{p.month}</th><td>{fmt(p.none)}</td><td>{fmt(p.early)}</td><td>{fmt(p.late)}</td></tr>)}</tbody></table></div></details>
+ <p className="figure-note">Shipments and replacement capacity are spread evenly across months. Actual harvests, shipping schedules, costs and stocks vary. This is not a prediction of when households will be affected.</p></section>;
+}

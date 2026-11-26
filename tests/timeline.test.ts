@@ -1,0 +1,3 @@
+import {describe,it,expect} from 'vitest';
+import {shipmentScenario,shipmentTimeline} from '../src/lib/commodities';
+describe('possible shipment timelines',()=>{it('matches existing endpoint and starts at zero',()=>{const r=shipmentTimeline(1200,40,6,50,2,20);expect(r[0]).toEqual({month:0,none:0,early:0,late:0});expect(r[6].early).toBe(shipmentScenario(1200,40,6,50,0,20).residual);expect(r[6].late).toBe(shipmentScenario(1200,40,6,50,2,20).residual);expect(r[2].late).toBe(r[2].none)});it('does not invent replacement after the scenario ends',()=>{const r=shipmentTimeline(1200,30,3,100,6,100);expect(r[3].late).toBe(r[3].none)})});
