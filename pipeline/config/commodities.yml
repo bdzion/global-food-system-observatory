@@ -108,3 +108,29 @@ commodities:
     item_code: "515"
     group: fresh
     role: Perishable fruit and storage-dependent supply
+
+  cattle_meat:
+    name: Cattle meat
+    item_code: "867"
+    group: animal
+    role: Animal protein; excludes live animals and processed meat
+  pig_meat:
+    name: Pig meat
+    item_code: "1035"
+    group: animal
+    role: Animal protein; feed, biosecurity and processing exposure
+  cattle_milk:
+    name: Raw cattle milk
+    item_code: "882"
+    group: animal
+    role: Perishable primary dairy product; excludes processed milk products
+  potatoes:
+    name: Potatoes
+    item_code: "116"
+    group: fresh
+    role: Regional staple and storage-sensitive food
+  cassava:
+    name: Cassava
+    item_code: "125"
+    group: fresh
+    role: Regional staple; raw roots are distinct from dried products
