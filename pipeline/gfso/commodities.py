@@ -61,6 +61,8 @@ def read_slices(config, cache=None):
         key = ids[row["Item Code"]]
         field = FIELDS[row["Element Code"]]
         entry = balances[key].setdefault(f"{year}|{iso}", {"flags": {}})
+        if field in entry.get("conflicts", []):
+            continue
         if field in entry and entry[field] != value:
             # Two different figures for the same country, product, year and
             # measure. The provider should not publish that, and if it does we
@@ -103,12 +105,21 @@ def profile(iso, year, balance, trade, *, perishable=False):
     supply = p + m - x if all(v is not None for v in (p, m, x)) else None
     # Apparent domestic availability before stock movements; not food intake.
     supply = supply if supply is not None and supply > 0 else None
+    trade_year = year
     direct = trade["reported"].get(f"{year}|{iso}", {})
     mirror = trade["mirrored"].get(f"{year}|{iso}", {})
+    # An older supplier record is context, never an aligned denominator.
+    if not direct and not mirror:
+        for previous in range(year-1, year-4, -1):
+            direct = trade["reported"].get(f"{previous}|{iso}", {})
+            mirror = trade["mirrored"].get(f"{previous}|{iso}", {})
+            if direct or mirror:
+                trade_year = previous
+                break
     rows = direct or mirror
     basis = "importer_reported" if direct else "exporter_mirrored" if mirror else "unavailable"
     total = sum(rows.values())
-    flags = trade["flags"].get(("direct|" if direct else "mirror|") + f"{year}|{iso}", {})
+    flags = trade["flags"].get(("direct|" if direct else "mirror|") + f"{trade_year}|{iso}", {})
     suppliers = [
         {"iso3": seller, "quantity_t": core.rnd(qty, 0),
          "share_pct": core.rnd(100 * qty / total, 2),
@@ -154,8 +165,9 @@ def profile(iso, year, balance, trade, *, perishable=False):
         "food_use_t": record.get("food_use"),
         "flags": record["flags"], "conflicts": record.get("conflicts", []),
         "suppliers": suppliers,
+        "supplier_year": trade_year if suppliers else None,
         "supplier_basis": basis,
-        "supplier_coverage_pct": core.rnd(100 * total / m, 1) if m is not None and m > 0 and total > 0 else None,
+        "supplier_coverage_pct": core.rnd(100 * total / m, 1) if trade_year == year and m is not None and m > 0 and total > 0 else None,
         "supplier_hhi": core.rnd(sum((v / total) ** 2 for v in rows.values()), 3) if total > 0 else None,
         "history": history,
     }
@@ -211,7 +223,7 @@ def build_extension(cache: Path | None, legacy: dict):
             "quantity": "Exact FAOSTAT item and tonne; no conversion or aggregation across product forms.",
             "gross_import_share_pct": "Imports / (production + imports - exports) × 100; requires all three quantities. Can exceed 100% for re-exporters; not net dependence.",
             "estimated_cover_months": "Opening-stock estimate / apparent domestic availability × 12; not measured reserves, not a forecast, and not used to rank risks. Where the provider's newest figure is a rounding error beside that country's own recent history, or a large buyer is recorded as holding under a week of use, no figure is published and the reason is given instead.",
-            "supplier_share": "Share of observed bilateral flows, not all imports; importer report preferred, mirror fallback; coverage can exceed 100% due to source discrepancies.",
+            "supplier_share": "Share of observed bilateral flows, not all imports. If the balance year has no trade evidence, up to three prior years may be shown separately; coverage is withheld for mismatched years. Importer report preferred, mirror fallback.",
             "food_price_gap": "National food CPI growth minus general CPI growth; not commodity-specific.",
             "healthy_diet_unaffordable": "FAO modelled national estimate, not commodity-specific.",
             "status": "Annual structural evidence, not a current alert.",

@@ -3,6 +3,7 @@ import { lastSeenRelease, loadRelease, rememberRelease, type LoadState } from ".
 import { href, useRoute } from "./lib/router";
 import { dateWords } from "./lib/format";
 import { Home } from "./pages/Home";
+import { DecisionIntelligence } from "./components/DecisionIntelligence";
 import { SourceAtlas, SystemPathways } from "./components/SourceAtlas";
 import { CommodityWorkspace } from "./pages/CommodityWorkspace";
 import { Countries } from "./pages/Countries";
@@ -74,7 +75,7 @@ export function App() {
               {NAV.map((item) => (
                 <li key={item.page}>
                   <a
-                    href={href(item.page)}
+                    href={href(item.page,undefined,(()=>{try{const saved=JSON.parse(localStorage.getItem("gfso.commodity-context.v1")||"{}");return {commodity:saved.commodity||route.query.get("commodity")||"all",geo:saved.geo||route.query.get("geo")||"global"}}catch{return {} as Record<string,string>}})())}
                     aria-current={active === item.page ? "page" : undefined}
                   >
                     {item.label}
@@ -118,20 +119,21 @@ export function App() {
               </p>
             ) : null}
 
-            {["home","commodities","stress"].includes(current) ? (
+            {current==="home" ? <DecisionIntelligence key="overview" release={state.release} route={route} mode="overview"/> : null}
+            {["commodities","stress"].includes(current) ? (
               <CommodityWorkspace
                 release={state.release}
                 route={route}
                 key={current+":"+route.id}
-                mode={current==="stress" || route.id === "what-if" ? "stress" : current==="home" ? "overview" : "explore"}
+                mode={current==="stress" || route.id === "what-if" ? "stress" : "explore"}
               />
             ) : null}
             {current === "wheat" ? <Home release={state.release} /> : null}
             {current === "home" ? <><SystemPathways/><p><a href={href("wheat")}>Original wheat situation assessment</a> · <a href="https://bdzion.github.io/canada-food-system-observatory/#/">Canada Food System Observatory</a></p></> : null}
             {current === "commodities" ? <p><a href={href("countries")}>Original wheat country profiles</a></p> : null}
-            {current === "watch" ? <><h1>Watch the food system</h1><p className="lede">What can we observe, what remains unknown, and which assumptions need to be checked?</p><SystemPathways/><p>Detailed evidence below is the original wheat transmission analysis, not a multi-commodity alert.</p><ChainPage release={state.release}/><p><a href={href("assumptions")}>Original wheat assumption ledger</a></p><SourceAtlas release={state.release}/></> : null}
-            {current === "briefs" ? <><h1>Evidence briefs</h1><p className="figure-note">Automatically assembled original wheat brief — not human-reviewed and not a whole-food-system forecast.</p><ul>{state.release.world.situation.lines.map((line,i)=><li key={i}>{line}</li>)}</ul><p>{state.release.world.situation.review_note}</p><p><a href={href("wheat")}>Read the full original assessment</a> · <a href={href("commodities")}>Explore other commodities</a></p><SystemPathways/></> : null}
-            {current === "how" ? <SourceAtlas release={state.release}/> : null}
+            {current === "watch" ? <><DecisionIntelligence key="watch" release={state.release} route={route} mode="watch"/><SystemPathways/><p><a href={href("chain")}>Original wheat transmission analysis</a> · <a href={href("assumptions")}>Wheat assumption ledger</a></p></> : null}
+            {current === "briefs" ? <DecisionIntelligence key="briefs" release={state.release} route={route} mode="briefs"/> : null}
+            {current === "how" ? <><DecisionIntelligence key="methods" release={state.release} route={route} mode="methods"/><SourceAtlas release={state.release}/></> : null}
             {current === "countries" && !route.id ? (
               <Countries release={state.release} />
             ) : null}

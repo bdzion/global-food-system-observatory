@@ -110,6 +110,8 @@ export interface Price {
   latest_value: number | null;
   change_over_year_pct: number | null;
   climb_anomaly: number | null;
+  freshness?: "current" | "delayed" | "historical";
+  assessment_period?: string;
   climb_reading: { state: string; words: string };
   history: { period: string; value: number }[];
 }

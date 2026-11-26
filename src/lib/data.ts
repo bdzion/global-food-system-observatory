@@ -23,6 +23,34 @@ async function readJson<T>(name: string): Promise<T> {
   return (await response.json()) as T;
 }
 
+// A single manifest identity governs every read, including lazy files.
+const verified = new Map<string, Promise<unknown>>();
+export async function readVerified<T>(manifest: Release["manifest"], name: string): Promise<T> {
+  const entry = manifest.files.find(f => f.name === name);
+  if (!entry) throw Error(name+" is not listed in this release");
+  const key = manifest.release_id+":"+name+":"+entry.sha256;
+  let pending = verified.get(key);
+  if (!pending) {
+    pending = (async()=>{
+      const response=await fetch(BASE+"/"+name,{cache:"no-cache"});
+      if(!response.ok)throw Error(name+" could not be loaded ("+response.status+")");
+      const bytes=await response.arrayBuffer();
+      if(bytes.byteLength!==entry.bytes)throw Error(name+" has a different size from the manifest");
+      const hash=Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes))).map(v=>v.toString(16).padStart(2,"0")).join("");
+      if(hash!==entry.sha256)throw Error(name+" checksum mismatch; reload the current release");
+      const result=JSON.parse(new TextDecoder().decode(bytes));
+      if(result.schema_version!==manifest.schema_version)throw Error(name+" schema mismatch");
+      return result;
+    })();
+    verified.set(key,pending);
+    pending.catch(()=>verified.delete(key));
+  }
+  return pending as Promise<T>;
+}
+export function hasFile(manifest: Release["manifest"], name:string) {
+  return manifest.files.some(f=>f.name===name);
+}
+
 export async function loadRelease(): Promise<Release> {
   const manifest = await readJson<Release["manifest"]>("manifest.json");
   if (manifest.schema_version !== SCHEMA) {
@@ -33,12 +61,12 @@ export async function loadRelease(): Promise<Release> {
     );
   }
   const [world, countries, ledger, pairs, scenario, sources] = await Promise.all([
-    readJson<Release["world"]>("world.json"),
-    readJson<Release["countries"]>("countries.json"),
-    readJson<Release["ledger"]>("ledger.json"),
-    readJson<Release["pairs"]>("pairs.json"),
-    readJson<Release["scenario"]>("scenario.json"),
-    readJson<Release["sources"]>("sources.json"),
+    readVerified<Release["world"]>(manifest,"world.json"),
+    readVerified<Release["countries"]>(manifest,"countries.json"),
+    readVerified<Release["ledger"]>(manifest,"ledger.json"),
+    readVerified<Release["pairs"]>(manifest,"pairs.json"),
+    readVerified<Release["scenario"]>(manifest,"scenario.json"),
+    readVerified<Release["sources"]>(manifest,"sources.json"),
   ]);
   return { manifest, world, countries, ledger, pairs, scenario, sources };
 }

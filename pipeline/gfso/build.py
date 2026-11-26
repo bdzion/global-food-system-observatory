@@ -376,7 +376,7 @@ def _situation(prices: dict, exporters: list[dict], countries: dict, led: dict, 
     wheat = prices.get("wheat_price")
 
     lines = []
-    if wheat:
+    if wheat and wheat.get("freshness", "current") == "current":
         change = wheat["change_over_year_pct"]
         if change is None:
             tail = "."
@@ -398,7 +398,7 @@ def _situation(prices: dict, exporters: list[dict], countries: dict, led: dict, 
         )
     else:
         lines.append(
-            "None of the world prices we follow is rising faster than it normally does."
+            "No current price series with enough history meets the unusual-rise threshold. Missing or old series are not evidence of stability."
         )
 
     thin = [
