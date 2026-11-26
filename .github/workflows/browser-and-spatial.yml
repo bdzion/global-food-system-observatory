@@ -1,0 +1,50 @@
+name: Browser and spatial validation
+on:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  browser:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: |
+          git clone --depth 1 --branch data https://github.com/${{ github.repository }}.git data-branch
+          rm -rf public/data
+          cp -r data-branch/data public/data
+      - run: npm ci && npm test && npm run build
+      - run: pip install playwright==1.56.0 && python -m playwright install --with-deps chromium
+      - name: Render and interact with site
+        run: |
+          npm run preview -- --host 127.0.0.1 --port 4173 > /tmp/gfso-preview.log 2>&1 &
+          for i in {1..30}; do curl -fsS http://127.0.0.1:4173/global-food-system-observatory/ >/dev/null && break; sleep 1; done
+          python scripts/browser-smoke.py
+  spatial:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r pipeline/requirements.txt
+      - name: Validate real global grid and national coverage
+        working-directory: pipeline
+        run: |
+          python - <<'PY'
+          from gfso import spatial
+          s=spatial.gather()
+          print(s["status"],s.get("period_end"),s.get("valid_cells"),len(s["countries"]))
+          assert s["status"]=="available"
+          assert s["valid_cells"]>=9000
+          assert len(s["countries"])>=30
+          PY
