@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { WorldEvidenceMap, RankedBars, PriceTrend, CountryTrends } from "../components/EvidenceVisuals";
+import { CompoundLab } from "../components/CompoundLab";
+import { WorldEvidenceMap, RankedBars, PriceTrend, CountryTrends, SupplierNetwork, ExposurePlot } from "../components/EvidenceVisuals";
 import { loadCommodities, shipmentScenario, priceAge, type CommodityRelease, type CommodityProfile } from "../lib/commodities";
 import { href, type Route } from "../lib/router";
 import { monthWords, tonnes } from "../lib/format";
@@ -133,6 +134,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
     </>}
     {(mode === "overview" || mode === "explore") && <>
       <PriceTrend price={product.price}/>
+      <ExposurePlot product={product} selected={geo} onSelect={id=>select(key,id)}/>
       <h2>{product.name}: {geo === "global" ? "reported trade" : allCountries.get(geo)}</h2>
       <p>{product.role}. Figures are for this exact product only — milled rice is never added to paddy, and soybeans are never added to soybean oil, because they are not the same thing. (FAOSTAT item {product.item_code}.)</p>
       {geo === "global" ? <><div className="visual-grid"><RankedBars title="Largest reported exporters" unit="t" rows={product.exporters.slice(0,8).map(c=>({id:c.iso3,name:c.name,value:c.exports_t}))} onSelect={id=>select(key,id)}/><RankedBars title="Largest reported importers" unit="t" rows={imports.slice(0,8).map(c=>({id:c.iso3,name:c.name,value:c.imports_t!}))} onSelect={id=>select(key,id)}/></div><div className="commodity-grid">
@@ -153,6 +155,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
         <p>{profile.supplier_basis === "importer_reported" ? "This country reports its own purchases, so this is its own account of who it buys from." : profile.supplier_basis === "exporter_mirrored" ? "This country does not report its own purchases. The list below is pieced together from what other countries said they sold it, so it covers only the sellers who do report." : "Neither this country nor its suppliers report this trade in a form we can use."} {profile.supplier_year&&profile.supplier_year!==profile.year? "Supplier evidence is from "+profile.supplier_year+"; supply balance is from "+profile.year+". No cross-year coverage ratio is calculated.":profile.supplier_coverage_pct!=null?"Observed flows account for "+percent(profile.supplier_coverage_pct)+" of recorded imports.":"Comparable supplier coverage is unavailable."}</p>
         {profile.suppliers.length ? <div className="commodity-table"><table><caption>Observed supplier flows · {profile.supplier_year??profile.year}</caption><thead><tr><th>Supplier</th><th>Tonnes</th><th>Share</th><th>Where the figure comes from</th></tr></thead><tbody>{profile.suppliers.slice(0,15).map(s => <tr key={s.iso3}><th scope="row">{s.name}</th><td>{number(s.quantity_t)}</td><td>{percent(s.share_pct)}</td><td>{sourceWords(s.flag)}</td></tr>)}</tbody></table></div> : <p>No bilateral flow evidence.</p>}
         <RankedBars title="Largest observed suppliers — share of reported bilateral flows" unit="%" rows={profile.suppliers.slice(0,8).map(s=>({id:s.iso3,name:s.name,value:s.share_pct}))}/>
+        <SupplierNetwork profile={profile}/>
         <CountryTrends profile={profile}/>
         <h3>Earlier years</h3><div className="commodity-table"><table><caption>Annual quantities in tonnes, same product form</caption><thead><tr><th>Year</th><th>Production</th><th>Imports</th><th>Exports</th></tr></thead><tbody>{profile.history.map(y => <tr key={y.year}><th scope="row">{y.year}</th><td>{number(y.production)}</td><td>{number(y.imports)}</td><td>{number(y.exports)}</td></tr>)}</tbody></table></div>
         <h3>What this means for households</h3><p>National food inflation minus general inflation: {profile.food_price_gap ? number(profile.food_price_gap.gap_pct_points,1)+" percentage points ("+monthWords(profile.food_price_gap.period)+")" : "Not available"}. Unable to afford a healthy diet: {profile.healthy_diet_unaffordable ? percent(profile.healthy_diet_unaffordable.value)+" ("+profile.healthy_diet_unaffordable.year+")" : "Not available"}. Neither indicator is specific to this commodity.</p>
@@ -174,6 +177,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
         <div className="commodity-table"><table><caption>{nameFor(profile)} · conditional shipment gaps, metric tonnes; different products are not summed</caption><thead><tr><th>Commodity / year</th><th>Reporting basis</th><th>No action</th><th>Early action</th><th>Delayed action</th></tr></thead><tbody>{scenarioRows.map(s=><tr key={s.id}><th scope="row">{s.name} · {s.year ?? "unknown"}</th><td>{s.flow == null ? "Unknown" : s.basis?.replaceAll("_"," ")}</td><td>{t(s.early?.gross)}</td><td>{t(s.early?.residual)}</td><td>{t(s.late?.residual)}</td></tr>)}</tbody></table></div>
         {scenarioRows.map(s=>s.early&&s.late?<RankedBars key={s.id} title={s.name+" — remaining shipment gap"} unit="t" rows={[{id:"none",name:"No action",value:s.early.gross},{id:"early",name:"Early action",value:s.early.residual},{id:"late",name:"Delayed action",value:s.late.residual}]}/>:null)}
         <p className="figure-note">Early action assumes replacement begins immediately; delayed action starts after the selected lead time. Replacement is capped by the assumed alternative supplier capacity and available time; competing buyers and seasonal availability are not modelled. No aggregation or substitution across products is inferred.</p>
+        <CompoundLab key={key+":"+geo+":"+actualSupplier.iso3} profile={profile} supplier={actualSupplier}/>
         <h3>Decision options and constraints</h3><div className="commodity-grid"><article className="commodity-panel"><strong>Importers</strong><p>Check alternative suppliers' exportable surplus, financing and transit time before purchasing.</p></article><article className="commodity-panel"><strong>Government</strong><p>Independently verify accessible reserves and assess targeted affordability support. Consider displacement of other buyers.</p></article></div>
       </>}
       <p><a href={href("what-if")}>The wheat what-if test, which also names who else would be bidding</a></p>

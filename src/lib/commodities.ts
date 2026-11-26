@@ -110,3 +110,18 @@ export function shipmentScenario(annualFlow: number, stopPct: number, months: nu
   const offset = Math.min(gross * replacementPct / 100, baseline * spareCapacityPct / 100) * activeMonths / months;
   return { gross, offset, residual: gross - offset };
 }
+
+/** Conditional physical balance over one common window. Production and lost
+ * imports are separate flows; no price elasticity or market clearing. Reserve
+ * release is an independently supplied assumption, not FAO stock estimates. */
+export function compoundBalance(production:number,annualSupplierFlow:number,months:number,productionLossPct:number,importLossPct:number,replacementPct:number,capacityPct:number,reserveTonnes:number,leadMonths:number){
+ const nums=[production,annualSupplierFlow,months,productionLossPct,importLossPct,replacementPct,capacityPct,reserveTonnes,leadMonths];
+ if(!nums.every(Number.isFinite)||production<0||annualSupplierFlow<0||reserveTonnes<0||months<=0||months>12||leadMonths<0||[productionLossPct,importLossPct,replacementPct,capacityPct].some(v=>v<0||v>100))throw RangeError("Invalid compound scenario");
+ const productionLoss=production*months/12*productionLossPct/100;
+ const importLoss=annualSupplierFlow*months/12*importLossPct/100;
+ const gross=productionLoss+importLoss;
+ const active=Math.max(0,months-leadMonths)/months;
+ const alternative=Math.min(importLoss*replacementPct/100,annualSupplierFlow*months/12*capacityPct/100)*active;
+ const reserve=Math.min(gross-alternative,reserveTonnes*active);
+ return {productionLoss,importLoss,gross,alternative,reserve,residual:Math.max(0,gross-alternative-reserve)};
+}

@@ -93,15 +93,15 @@ export function SeriesChart({title,series,unit}: {title:string;series:{name:stri
   const min=Math.min(0,...values), max=Math.max(0,...values);
   const x=(i:number)=>65+i*555/Math.max(1,periods.length-1);
   const y=(v:number)=>180-(v-min)/(max-min||1)*150;
-  const palette=["#276ca6","#bd6a29","#288064","#8255a6"];
+  const palette=["#276ca6","#bd6a29","#288064","#8255a6","#9e3b61","#76802e"];
   const chosen=active&&periods.includes(active)?active:periods[periods.length-1];
   return <section className="visual-panel"><h3>{title}</h3>
     <svg viewBox="0 0 650 215" className="evidence-chart" role="img" aria-label={title+"; "+unit+"; values also available in the tables"}>
       {[0,.25,.5,.75,1].map(f=>{const v=min+(max-min)*f;return <g key={f}><line x1="65" x2="620" y1={y(v)} y2={y(v)} stroke="var(--line)"/><text x="59" y={y(v)+4} textAnchor="end" fontSize="10" fill="currentColor">{new Intl.NumberFormat("en",{notation:"compact",maximumFractionDigits:1}).format(v)}</text></g>})}
-      {series.map((s,si)=>{const lookup=new Map(s.points.map(p=>[p.period,p.value]));let paths:string[]=[];let d="";periods.forEach((p,i)=>{const v=lookup.get(p);if(v==null||!Number.isFinite(v)){if(d)paths.push(d);d="";return;}d+=(d?" L":"M")+x(i)+","+y(v);});if(d)paths.push(d);return <g key={s.name}>{paths.map((path,i)=><path key={i} d={path} stroke={palette[si%4]} strokeWidth="2.5" fill="none"/>)}{periods.map((p,i)=>{const v=lookup.get(p);return v==null?null:<circle key={p} cx={x(i)} cy={y(v)} r={p===chosen?4:2} fill={palette[si%4]}><title>{s.name} · {p}: {val(v,unit)}</title></circle>})}</g>})}
+      {series.map((s,si)=>{const lookup=new Map(s.points.map(p=>[p.period,p.value]));let paths:string[]=[];let d="";periods.forEach((p,i)=>{const v=lookup.get(p);if(v==null||!Number.isFinite(v)){if(d)paths.push(d);d="";return;}d+=(d?" L":"M")+x(i)+","+y(v);});if(d)paths.push(d);return <g key={s.name}>{paths.map((path,i)=><path key={i} d={path} stroke={palette[si%palette.length]} strokeWidth="2.5" fill="none"/>)}{periods.map((p,i)=>{const v=lookup.get(p);return v==null?null:<circle key={p} cx={x(i)} cy={y(v)} r={p===chosen?4:2} fill={palette[si%palette.length]}><title>{s.name} · {p}: {val(v,unit)}</title></circle>})}</g>})}
       {periods.map((p,i)=>(i===0||i===periods.length-1||i%Math.max(1,Math.ceil(periods.length/5))===0)?<text key={p} x={x(i)} y="202" textAnchor="middle" fontSize="10" fill="currentColor">{p}</text>:null)}
     </svg>
-    <div className="map-legend">{series.map((s,i)=><span key={s.name}><i style={{background:palette[i%4]}}/>{s.name}</span>)}</div>
+    <div className="map-legend">{series.map((s,i)=><span key={s.name}><i style={{background:palette[i%palette.length]}}/>{s.name}</span>)}</div>
     <label>Inspect period<select value={chosen} onChange={e=>setActive(e.target.value)}>{periods.map(p=><option key={p}>{p}</option>)}</select></label>
     <p className="map-readout" aria-live="polite">{chosen}: {series.map(s=>s.name+" "+val(s.points.find(p=>p.period===chosen)?.value,unit)).join(" · ")}</p>
   </section>;
@@ -113,4 +113,23 @@ export function PriceTrend({price}:{price:Price|null}) {
 
 export function CountryTrends({profile}:{profile:CommodityProfile}) {
   return <SeriesChart title="Production, imports and exports" unit="t" series={(["production","imports","exports"] as const).map(key=>({name:key[0].toUpperCase()+key.slice(1),points:profile.history.map(r=>({period:String(r.year),value:r[key]}))}))}/>;
+}
+
+/** Observed bilateral flows, not a shipping-route map. */
+export function SupplierNetwork({profile}:{profile:CommodityProfile}){
+ const rows=profile.suppliers.slice(0,8);
+ const [active,setActive]=useState<string|null>(null);
+ const top=rows.find(s=>s.iso3===active)||rows[0];
+ const max=Math.max(1,...rows.map(s=>s.quantity_t));
+ return <section className="visual-panel"><h3>Supplier dependency network</h3><p className="figure-note">Observed annual bilateral trade ({profile.supplier_year??profile.year}); width represents reported tonnes. This is a relationship diagram, not physical transport routes.</p>
+ {!rows.length?<p>No observed supplier flows.</p>:<><svg viewBox="0 0 650 270" className="evidence-chart" role="group" aria-label="Supplier flows to selected importing country">{rows.map((s,i)=>{const y=25+i*31;return <g key={s.iso3} role="button" tabIndex={0} aria-label={s.name+": "+val(s.quantity_t,"t")} onFocus={()=>setActive(s.iso3)} onPointerEnter={()=>setActive(s.iso3)} onClick={()=>setActive(s.iso3)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();setActive(s.iso3)}}}><path d={`M190 ${y} C300 ${y} 365 135 470 135`} stroke={top?.iso3===s.iso3?"#bd6a29":"#397db0"} strokeOpacity=".75" fill="none" strokeWidth={Math.max(1,18*s.quantity_t/max)}/><rect x="4" y={y-11} width="180" height="23" rx="4" fill="var(--accent-soft)" stroke="var(--line)"/><text x="12" y={y+4} fontSize="11" fill="currentColor">{s.name.length>25?s.name.slice(0,24)+"…":s.name}</text><title>{s.name}: {val(s.quantity_t,"t")}</title></g>})}<rect x="470" y="110" width="175" height="50" rx="6" fill="var(--accent-soft)" stroke="var(--line)"/><text x="557" y="132" textAnchor="middle" fill="currentColor" fontSize="12">{profile.name.length>24?profile.name.slice(0,23)+"…":profile.name}</text><text x="557" y="147" textAnchor="middle" fill="currentColor" fontSize="10">Selected importer</text></svg><p className="map-readout" aria-live="polite">{top?top.name+": "+val(top.quantity_t,"t")+" · "+val(top.share_pct,"%")+" of observed flows":""}</p></>}
+ </section>;
+}
+export function ExposurePlot({product,selected,onSelect}:{product:Commodity;selected:string;onSelect:(iso:string)=>void}){
+ const rows=Object.values(product.countries).filter(r=>r.gross_import_share_pct!=null&&r.estimated_cover_months!=null);
+ const [focus,setFocus]=useState<string|null>(null);
+ const maxX=Math.max(100,...rows.map(r=>r.gross_import_share_pct!)),maxY=Math.max(1,...rows.map(r=>r.estimated_cover_months!));
+ const x=(v:number)=>62+v/maxX*552,y=(v:number)=>220-v/maxY*190;
+ const r=rows.find(v=>v.iso3===(focus||selected));
+ return <details className="visual-panel"><summary>Compare structural import exposure and estimated stock cover ({rows.length} complete records)</summary><p className="figure-note">FAO-derived estimates for {product.year??"unknown year"}. Only complete cases appear; stock cover is not verified accessible reserves. No vulnerability thresholds or rankings are inferred.</p>{rows.length?<><svg viewBox="0 0 650 265" className="evidence-chart" role="group" aria-label="Scatterplot of gross import share and estimated stock cover">{[0,.25,.5,.75,1].map(t=><g key={t}><line x1="62" x2="614" y1={y(t*maxY)} y2={y(t*maxY)} stroke="var(--line)"/><text x="55" y={y(t*maxY)+4} textAnchor="end" fontSize="10" fill="currentColor">{fmt(t*maxY)}</text><text x={x(t*maxX)} y="237" textAnchor="middle" fontSize="10" fill="currentColor">{fmt(t*maxX)}</text></g>)}{rows.map(row=><circle key={row.iso3} cx={x(row.gross_import_share_pct!)} cy={y(row.estimated_cover_months!)} r={row.iso3===selected?6:3.8} fill={row.iso3===selected?"#bd6a29":"#397db0"} stroke="var(--card)" role="button" tabIndex={0} aria-label={row.name+": "+fmt(row.gross_import_share_pct!)+" percent; "+fmt(row.estimated_cover_months!)+" months"} onFocus={()=>setFocus(row.iso3)} onPointerEnter={()=>setFocus(row.iso3)} onClick={()=>onSelect(row.iso3)} onKeyDown={e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();onSelect(row.iso3)}}}><title>{row.name}</title></circle>)}<text x="340" y="255" textAnchor="middle" fontSize="11" fill="currentColor">Gross import share (%)</text><text x="15" y="125" transform="rotate(-90 15 125)" textAnchor="middle" fontSize="11" fill="currentColor">Estimated stock cover (months)</text></svg><p className="map-readout" aria-live="polite">{r?r.name+": "+val(r.gross_import_share_pct,"%")+" · "+val(r.estimated_cover_months,"months"):"Focus a point to inspect a country; click to select."}</p></>:<p>No complete records for this comparison.</p>}</details>;
 }

@@ -2,11 +2,11 @@ import { useState } from "react";
 import type { Release } from "../lib/types";
 
 const SOURCES = [
-  ["Markets & supply","USDA PSD","https://fas.usda.gov/psdonline","Monthly production, consumption and stocks; marketing years","Documented API; key or validated bulk feed required","Keep marketing-year and calendar-year stocks separate."],
+  ["Markets & supply","USDA PSD","https://fas.usda.gov/psdonline","Monthly production, consumption and stocks; marketing years","Optional bulk adapter; see Seasonal and market evidence for actual status","Keep marketing-year and calendar-year stocks separate."],
   ["Markets & supply","AMIS","https://www.amis-outlook.org/","Monthly wheat, maize, rice and soybean market assessments","External reference","Distinguish forecasts from observations."],
   ["Markets & supply","FAO GIEWS / FPMA","https://www.fao.org/giews/food-prices/en/","Domestic commodity prices; market-specific reporting","External reference","Preserve location, market type, currency and unit."],
   ["Markets & supply","UN Comtrade","https://comtrade.un.org/","Bilateral trade including agricultural inputs","External reference","Reconcile HS revisions and quantity units."],
-  ["Climate & environment","GEOGLAM Crop Monitor","https://www.cropmonitor.org/data-archive","Monthly crop conditions and maps","CC BY 4.0 documented; ingestion pending","Crop condition is not an observed yield loss."],
+  ["Climate & environment","GEOGLAM Crop Monitor","https://www.cropmonitor.org/data-archive","Monthly crop conditions and maps","Optional dated layer catalogue adapter; see actual release status","Crop condition is not an observed yield loss."],
   ["Climate & environment","CHIRPS","https://www.chc.ucsb.edu/data/chirps","Rainfall anomalies and drought","External reference","Weight by crop area and growing season."],
   ["Climate & environment","Copernicus Climate Data Store","https://cds.climate.copernicus.eu/","Temperature, soil moisture, climate forecasts","External reference","Verify product-specific licence and evidence class."],
   ["Climate & environment","FAO AQUASTAT","https://www.fao.org/aquastat/en/","Water use, resources and irrigation","External reference","Structural evidence is not current irrigation availability."],

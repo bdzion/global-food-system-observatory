@@ -75,7 +75,7 @@ export function App() {
               {NAV.map((item) => (
                 <li key={item.page}>
                   <a
-                    href={href(item.page,undefined,(()=>{try{const saved=JSON.parse(localStorage.getItem("gfso.commodity-context.v1")||"{}");return {commodity:saved.commodity||route.query.get("commodity")||"all",geo:saved.geo||route.query.get("geo")||"global"}}catch{return {}}})())}
+                    href={href(item.page,undefined,(()=>{try{const saved=JSON.parse(localStorage.getItem("gfso.commodity-context.v1")||"{}");return {commodity:saved.commodity||route.query.get("commodity")||"all",geo:saved.geo||route.query.get("geo")||"global"}}catch{return {} as Record<string,string>}})())}
                     aria-current={active === item.page ? "page" : undefined}
                   >
                     {item.label}

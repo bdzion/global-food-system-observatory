@@ -63,7 +63,7 @@ def compact_views(extension):
                       "price_period":(p.get("price") or {}).get("latest_period")}
         slim={}
         for iso,r in rows.items():
-            slim[iso]={"iso3":iso,"name":r["name"],"year":r["year"],**{k:r.get(k) for k in keys}}
+            slim[iso]={"iso3":iso,"name":r["name"],"year":r["year"],"supplier_year":r.get("supplier_year"),**{k:r.get(k) for k in keys}}
             countries[iso]=r["name"]
         summary[id]={**{k:v for k,v in p.items() if k not in ("countries","price")},
                      "price":p.get("price"),"countries":slim}
@@ -87,3 +87,21 @@ def signals(world):
     return {"schema_version":SCHEMA_VERSION,"signals":sorted(rows,key=lambda r:-abs(r["anomaly"] or 0)),
             "historical_prices":[{"id":id,"period":p["latest_period"]} for id,p in prices.items() if p.get("freshness")!="current"],
             "method":"Unvalidated growth-anomaly screen, current monthly observations only. No alerts inferred for missing domains."}
+
+def archive(out, current, release_id):
+    """Bounded retrospective record of actual published assessment vintages.
+    Not a backtest: no hindsight reclassification of past alerts."""
+    old=[]
+    try:
+        manifest=core.read_json(out/"manifest.json")
+        file=next((x for x in manifest.get("files",[]) if x["name"]=="assessment-history.json"),None)
+        path=out/"assessment-history.json"
+        if file and path.exists() and core.checksum(path)==file["sha256"]:
+            old=core.read_json(path).get("snapshots",[])
+    except (OSError,ValueError,TypeError,AttributeError):
+        old=[]
+    row={"release_id":release_id,"assessed_at":core.iso(core.utc_now()),"signals":current["signals"],
+         "historical_prices":current["historical_prices"]}
+    snapshots=[s for s in old if s.get("release_id")!=release_id]+[row]
+    return {"schema_version":SCHEMA_VERSION,"snapshots":snapshots[-120:],
+            "method":"Published assessment vintages; not forecasts or validated alert outcomes."}

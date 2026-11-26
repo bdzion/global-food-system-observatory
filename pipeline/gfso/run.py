@@ -168,6 +168,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nChecks passed. Nothing published (dry run). Would be {release_id}.")
         return 0
 
+    release["assessment-history"] = intelligence.archive(args.out, release["signals"], release_id)
     manifest = publish(release, args.out, release_id)
     print(f"\nPublished release {manifest['release_id']} to {args.out}")
     for key, value in manifest["coverage"].items():
