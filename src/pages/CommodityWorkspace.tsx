@@ -114,8 +114,8 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
       <p className="lede">Track production, markets, trade and resilience buffers across interconnected foods. Annual figures describe structural exposure, not current shortages. New evidence domains are added only when source and validation requirements are met.</p>
     </div>
     <div className="commodity-filter" aria-label="Choose a crop and a country">
-      <label>Commodity<select value={key} onChange={e => select(e.target.value, geo)}>{Object.entries(products).map(([id,p]) => <option key={id} value={id}>{p.name}</option>)}</select></label>
-      <label>Country<select value={geo} onChange={e => select(key, e.target.value)}><option value="global">Global</option>{choices.map(([id,n]) => <option key={id} value={id}>{n}</option>)}</select></label>
+      <label>Commodity<select aria-label="Commodity" value={key} onChange={e => select(e.target.value, geo)}>{Object.entries(products).map(([id,p]) => <option key={id} value={id}>{p.name}</option>)}</select></label>
+      <label>Country<select aria-label="Country" value={geo} onChange={e => select(key, e.target.value)}><option value="global">Global</option>{choices.map(([id,n]) => <option key={id} value={id}>{n}</option>)}</select></label>
       <p className="figure-note" role="status">{product.name} · {geo === "global" ? "Global" : allCountries.get(geo)} · figures for {product.year ?? "an unknown year"}</p>
     </div>
     {(mode === "overview" || mode === "explore") && <WorldEvidenceMap product={product} selected={geo} onSelect={id=>select(key,id)}/>}

@@ -15,15 +15,17 @@ with sync_playwright() as p:
             assert not page.locator("body").inner_text().startswith("Nothing is being shown"),route
             assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 4"),f"Horizontal overflow {width} {route}"
             print(width,route,"rendered")
-        page.goto(URL+"#/commodities?commodity=wheat&geo=CAN")
-        page.get_by_label("Commodity",exact=True).wait_for(timeout=30000)
-        page.get_by_label("Commodity",exact=True).select_option("maize")
+        page.goto(URL+"#/commodities?commodity=wheat&geo=CAN",wait_until="domcontentloaded")
         page.get_by_role("heading",name="Explore global food-system evidence",exact=True).wait_for(timeout=30000)
-        assert page.get_by_label("Commodity",exact=True).input_value()=="maize"
-        page.get_by_label("Country",exact=True).select_option("BGD")
+        page.get_by_role("combobox",name="Commodity",exact=True).wait_for(timeout=30000)
+        page.get_by_role("combobox",name="Commodity",exact=True).select_option("maize")
+        page.get_by_role("heading",name="Explore global food-system evidence",exact=True).wait_for(timeout=30000)
+        assert page.get_by_role("combobox",name="Commodity",exact=True).input_value()=="maize"
+        page.get_by_role("combobox",name="Country",exact=True).select_option("BGD")
+        page.wait_for_function("location.hash.includes('geo=BGD')")
         page.get_by_role("link",name="Watch",exact=True).click()
         page.get_by_role("heading",name="Signals and decision opportunities",exact=True).wait_for(timeout=30000)
-        assert page.get_by_label("Country",exact=True).input_value()=="BGD"
+        assert page.get_by_role("combobox",name="Country",exact=True).input_value()=="BGD"
         assert not errors,errors
         page.close()
     browser.close()
