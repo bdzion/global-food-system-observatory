@@ -3,6 +3,7 @@ import { lastSeenRelease, loadRelease, rememberRelease, type LoadState } from ".
 import { href, useRoute } from "./lib/router";
 import { dateWords } from "./lib/format";
 import { Home } from "./pages/Home";
+import { SourceAtlas, SystemPathways } from "./components/SourceAtlas";
 import { CommodityWorkspace } from "./pages/CommodityWorkspace";
 import { Countries } from "./pages/Countries";
 import { CountryPage } from "./pages/CountryPage";
@@ -14,13 +15,12 @@ import { HowItWorks } from "./pages/HowItWorks";
 /* Navigation in plain words. Nobody arriving here should have to work out what
  * "exposure analytics" or "systemic risk" means before they can find anything. */
 const NAV = [
-  { page: "home", label: "What's happening" },
-  { page: "commodities", label: "Crops" },
-  { page: "countries", label: "Countries" },
-  { page: "chain", label: "How a shock travels" },
-  { page: "what-if", label: "What if" },
-  { page: "assumptions", label: "Our assumptions" },
-  { page: "how", label: "How this works" },
+  { page: "home", label: "Overview" },
+  { page: "commodities", label: "Explore" },
+  { page: "watch", label: "Watch" },
+  { page: "stress", label: "Stress Test" },
+  { page: "briefs", label: "Briefs" },
+  { page: "how", label: "Data & Methods" },
 ];
 
 export function App() {
@@ -52,7 +52,9 @@ export function App() {
   // A country profile belongs under Countries in the navigation, so the
   // reader can see where they are rather than losing the highlight entirely.
   const current = route.page === "country" ? "countries" : route.page;
-  const active = current;
+  const active = ["countries","country"].includes(current) ? "commodities" : ["chain","assumptions"].includes(current) ? "watch" : current === "what-if" || (current==="commodities"&&route.id==="what-if") ? "stress" : current === "wheat" ? "home" : current;
+  const [theme,setTheme]=useState(()=>{try{return localStorage.getItem("gfso.theme")||"auto"}catch{return "auto"}});
+  useEffect(()=>{if(theme==="auto")delete document.documentElement.dataset.gfsoTheme;else document.documentElement.dataset.gfsoTheme=theme;try{localStorage.setItem("gfso.theme",theme)}catch{/* optional */}},[theme]);
 
   return (
     <>
@@ -62,10 +64,11 @@ export function App() {
 
       <header className="masthead">
         <div className="masthead-inner">
-          <a className="wordmark" href={href("home")}>
+          <div className="brand-row"><a className="wordmark" href={href("home")}>
+            <span>University of Guelph · Research prototype</span>
             Global Food System Observatory
-            <span>Where the world's staple crops come from, and what could interrupt them</span>
-          </a>
+            <span>Companion to the Arrell Food Institute Canada Food System Observatory</span>
+          </a><button className="theme-toggle" onClick={()=>setTheme(theme==="auto"?"dark":theme==="dark"?"light":"auto")} aria-label={"Colour mode: "+theme+"; change"}>◐ {theme}</button></div>
           <nav className="main" aria-label="Main">
             <ul>
               {NAV.map((item) => (
@@ -82,6 +85,7 @@ export function App() {
           </nav>
         </div>
       </header>
+      <div className="data-strip" role="status"><div>{state.status==="ready"?<><span>Release <strong>{state.release.manifest.release_id}</strong></span><span>Built {dateWords(state.release.manifest.generated_at_utc)}</span><span>{state.release.sources.sources.filter(s=>!s.older_than_expected && s.provider_updated).length} of {state.release.sources.sources.length} published sources within expected age</span></>:<span>Data {state.status==="loading"?"loading":"unavailable"}</span>}<span>Research tool · not an official warning service</span></div></div>
 
       <main id="content">
         {state.status === "loading" ? (
@@ -114,14 +118,20 @@ export function App() {
               </p>
             ) : null}
 
-            {current === "commodities" ? (
+            {["home","commodities","stress"].includes(current) ? (
               <CommodityWorkspace
                 release={state.release}
                 route={route}
-                mode={route.id === "what-if" ? "stress" : "overview"}
+                key={current+":"+route.id}
+                mode={current==="stress" || route.id === "what-if" ? "stress" : current==="home" ? "overview" : "explore"}
               />
             ) : null}
-            {current === "home" ? <Home release={state.release} /> : null}
+            {current === "wheat" ? <Home release={state.release} /> : null}
+            {current === "home" ? <><SystemPathways/><p><a href={href("wheat")}>Original wheat situation assessment</a> · <a href="https://bdzion.github.io/canada-food-system-observatory/#/">Canada Food System Observatory</a></p></> : null}
+            {current === "commodities" ? <p><a href={href("countries")}>Original wheat country profiles</a></p> : null}
+            {current === "watch" ? <><h1>Watch the food system</h1><p className="lede">What can we observe, what remains unknown, and which assumptions need to be checked?</p><SystemPathways/><p>Detailed evidence below is the original wheat transmission analysis, not a multi-commodity alert.</p><ChainPage release={state.release}/><p><a href={href("assumptions")}>Original wheat assumption ledger</a></p><SourceAtlas release={state.release}/></> : null}
+            {current === "briefs" ? <><h1>Evidence briefs</h1><p className="figure-note">Automatically assembled original wheat brief — not human-reviewed and not a whole-food-system forecast.</p><ul>{state.release.world.situation.lines.map((line,i)=><li key={i}>{line}</li>)}</ul><p>{state.release.world.situation.review_note}</p><p><a href={href("wheat")}>Read the full original assessment</a> · <a href={href("commodities")}>Explore other commodities</a></p><SystemPathways/></> : null}
+            {current === "how" ? <SourceAtlas release={state.release}/> : null}
             {current === "countries" && !route.id ? (
               <Countries release={state.release} />
             ) : null}
@@ -138,7 +148,7 @@ export function App() {
             {current === "assumptions" ? <Assumptions release={state.release} /> : null}
             {current === "how" ? <HowItWorks release={state.release} /> : null}
 
-            {!NAV.some((n) => n.page === current) && !["country","countries","chain","what-if","assumptions","commodities"].includes(route.page) ? (
+            {!NAV.some((n) => n.page === current) && !["country","countries","chain","what-if","assumptions","commodities","wheat"].includes(route.page) ? (
               <>
                 <h1>That page is not here</h1>
                 <p>
