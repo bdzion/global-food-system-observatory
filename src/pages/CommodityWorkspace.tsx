@@ -42,7 +42,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
   const [delay, setDelay] = useState(2);
   const [supplier, setSupplier] = useState("");
   const [compound, setCompound] = useState(false);
-  const [group, setGroup] = useState("all");
+  const [group, setGroup] = useState("staples");
 
   useEffect(() => {
     let cancelled = false;
@@ -111,11 +111,12 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
       <label>Country<select value={geo} onChange={e => select(key, e.target.value)}><option value="global">Global</option>{choices.map(([id,n]) => <option key={id} value={id}>{n}</option>)}</select></label>
       <p className="figure-note" role="status">{product.name} · {geo === "global" ? "Global" : allCountries.get(geo)} · figures for {product.year ?? "an unknown year"}</p>
     </div>
+    {(mode === "overview" || mode === "explore") && <WorldEvidenceMap product={product} selected={geo} onSelect={id=>select(key,id)}/>}
     {mode === "overview" && <>
       <h2>What we cover</h2>
       <div className="product-groups" aria-label="Filter product catalogue">{groups.map(([id,label])=><button key={id} className="visual-button" aria-pressed={group===id} onClick={()=>setGroup(id)}>{label}</button>)}</div>
       <div className="commodity-grid">{Object.entries(products).filter(([id])=>group==="all"||groupOf(id)===group).map(([id,p]) => <article className="commodity-panel" key={id}>
-        <h3>{p.name}</h3><p>{p.role}</p><p><strong>{Object.keys(p.countries).length}</strong> countries · {p.year ?? "no year"}</p>
+        <h3>{p.name}</h3><p>{p.role}</p><p><strong>{Object.keys(p.countries).length}</strong> country records · {p.year ?? "no year"}</p>
         <p>{p.price ? <>{p.price.plain_name}: {number(p.price.latest_value, 1)} {p.price.unit} ({monthWords(p.price.latest_period)})</> : "No benchmark price connected for this product"}</p>
         <a href={href("commodities", undefined, {commodity:id, geo})}>Explore {p.name.toLowerCase()}</a>
       </article>)}</div>
@@ -123,7 +124,6 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
       <p className="figure-note">These are world reference prices. They are not the price any particular farmer or buyer paid, and a rise here reaches a harvest months later, not this week.</p>
     </>}
     {(mode === "overview" || mode === "explore") && <>
-      <WorldEvidenceMap product={product} selected={geo} onSelect={id=>select(key,id)}/>
       <PriceTrend price={product.price}/>
       <h2>{product.name}: {geo === "global" ? "reported trade" : allCountries.get(geo)}</h2>
       <p>{product.role}. Figures are for this exact product only — milled rice is never added to paddy, and soybeans are never added to soybean oil, because they are not the same thing. (FAOSTAT item {product.item_code}.)</p>
