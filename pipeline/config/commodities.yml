@@ -1,0 +1,26 @@
+# Product forms are not interchangeable. Rice is separated to prevent
+# combining raw paddy production with milled-rice trade without conversion.
+# Only exact-item quantities in tonnes are admitted.
+commodities:
+  wheat:
+    name: Wheat grain
+    item_code: "15"
+    price_id: wheat_price
+    role: Staple food, feed and industrial uses
+  rice:
+    name: Milled rice
+    item_code: "31"
+    role: Staple food; excludes paddy, husked and broken rice
+  rice_paddy:
+    name: Rice paddy
+    item_code: "27"
+    role: Primary crop; not comparable directly with milled rice
+  maize:
+    name: Maize grain
+    item_code: "56"
+    price_id: maize_price
+    role: Food, feed and industrial uses
+  soybeans:
+    name: Soybeans
+    item_code: "236"
+    role: Oilseed and feed processing; excludes oil and meal
