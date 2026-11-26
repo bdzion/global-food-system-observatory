@@ -56,15 +56,7 @@ export function HowItWorks({ release }: { release: Release }) {
 
   return (
     <>
-      <h1>How this works</h1>
-      <p className="lede">
-        Everything on this site is built from figures other people publish. This
-        page says which, how old they are, what they cover and what they leave
-        out. If a number here cannot be traced back to one of these, it should
-        not be on the site.
-      </p>
-
-      <h2>In one paragraph</h2>
+      <h2>What this site does, in one paragraph</h2>
       <p>
         Four times a day a program downloads the published figures listed below,
         checks them, and works out a small set of indicators: how much of its
@@ -78,7 +70,7 @@ export function HowItWorks({ release }: { release: Release }) {
 
       <h2>Where the figures come from</h2>
       <DataTable
-        caption="Every source behind this site. A source marked older than we expect has not been updated as often as its publisher normally updates it — which may mean a delay at their end, or a problem at ours."
+        caption="Every source behind the figures on this site. A source marked older than we expect has not been updated as often as its publisher normally updates it — which may mean a delay at their end, or a problem at ours."
         columns={columns}
         rows={sources.sources}
         rowKey={(s) => s.id}
@@ -102,19 +94,15 @@ export function HowItWorks({ release }: { release: Release }) {
           does not have.
         </li>
         <li>
-          <strong>It does not cover whole links of the chain.</strong> How crops
-          are doing in the ground, and whether grain can physically move, both
-          have nothing watching them here. They are marked that way everywhere
-          they appear.
+          <strong>It cannot see whole links of the chain.</strong> Nothing here measures grain actually moving, or what a harvest will finally come to. The weather and crop-condition pages are the closest we get, and they are indirect.
         </li>
         <li>
-          <strong>It is not current for most things.</strong> Only the price
-          figures are monthly. Trade, stocks and diet costs are published once a
-          year and arrive about a year late.
+          <strong>It is not current for most things.</strong> Prices and some weather data are monthly. Many trade, stock and diet figures are annual and arrive much later.
         </li>
       </ul>
 
-      <h2>How the main figures are worked out</h2>
+      <details className="method-detail">
+        <summary><h2>The arithmetic behind each figure</h2><span>Open this to check our working</span></summary>
       <h3>Share of wheat bought abroad</h3>
       <p>
         Imports divided by what the country has available to use, where
@@ -161,7 +149,10 @@ export function HowItWorks({ release }: { release: Release }) {
         the two series do not share a recent month, we publish nothing.
       </p>
 
-      <h2>This release</h2>
+      </details>
+
+      <details className="method-detail">
+        <summary><h2>Which version of the figures you are looking at</h2><span>Open this to check what was published when</span></summary>
       <ul>
         <li>Release {manifest.release_id}, put together {dateWords(manifest.generated_at_utc)}.</li>
         <li>{manifest.coverage.countries_profiled} countries profiled, for {countries.year}.</li>
@@ -177,6 +168,8 @@ export function HowItWorks({ release }: { release: Release }) {
         release does not go out and the previous one stays up, visibly labelled
         with its age.
       </p>
+
+      </details>
 
       <h2>Who made this, and how to tell us it is wrong</h2>
       <p>

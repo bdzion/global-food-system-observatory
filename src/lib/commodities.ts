@@ -125,3 +125,9 @@ export function compoundBalance(production:number,annualSupplierFlow:number,mont
  const reserve=Math.min(gross-alternative,reserveTonnes*active);
  return {productionLoss,importLoss,gross,alternative,reserve,residual:Math.max(0,gross-alternative-reserve)};
 }
+
+/** Cumulative gaps at elapsed months, consistent with the original scenario endpoint. */
+export function shipmentTimeline(annualFlow:number,stopPct:number,months:number,replacementPct:number,leadMonths:number,capacityPct:number){
+ if(!Number.isInteger(months)||months<1||months>12)throw new RangeError('Expected whole months 1–12');
+ return [{month:0,none:0,early:0,late:0},...Array.from({length:months},(_,i)=>{const month=i+1;const early=shipmentScenario(annualFlow,stopPct,month,replacementPct,0,capacityPct);const late=shipmentScenario(annualFlow,stopPct,month,replacementPct,leadMonths,capacityPct);return {month,none:early.gross,early:early.residual,late:late.residual}})];
+}
