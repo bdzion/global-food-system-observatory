@@ -158,7 +158,7 @@ def main(argv: list[str] | None = None) -> int:
     release["api-evidence"] = api_evidence.gather()
     release["spatial-evidence"] = spatial.gather(args.cache)
     release["scientific-validation"] = validation.evaluate(data["pink"])
-    release["authenticated-evidence"] = authenticated.gather()
+    release["authenticated-evidence"] = authenticated.gather(release["external-evidence"]["psd"].get("records",[]))
 
     problems = checks(release)
     if problems:

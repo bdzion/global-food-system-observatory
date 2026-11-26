@@ -1,0 +1,38 @@
+name: Historical scientific evaluation
+on:
+  pull_request:
+    paths:
+      - "pipeline/gfso/validation.py"
+      - ".github/workflows/scientific-evaluation.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  evaluation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r pipeline/requirements.txt
+      - name: Evaluate actual benchmark price histories
+        working-directory: pipeline
+        run: |
+          python - <<'PY'
+          from gfso import validation,core
+          from gfso.connectors import worldbank
+          r=validation.evaluate(worldbank.pink_sheet())
+          assert r["status"]=="available"
+          for row in r["rows"]:
+              print(row["id"],row["screen"],"persistence",row["persistence"],"never",row["no_alert"])
+              for method in ("screen","persistence","no_alert"):
+                  s=row[method]
+                  assert s["tp"]+s["fp"]+s["fn"]+s["tn"]==s["n"]
+          core.write_json(core.ROOT/"scientific-validation.json",r)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: retrospective-validation
+          path: pipeline/scientific-validation.json

@@ -2,7 +2,7 @@
 
 ## Credentials
 Configure GitHub repository Settings → Secrets and variables → Actions:
-- Secret USDA_FAS_API_KEY, obtained from https://apps.fas.usda.gov/opendatawebv2/. The authenticated maize endpoint is probed; its values are not republished until reconciled with the existing bulk data.
+- Secret USDA_FAS_API_KEY, obtained from https://apps.fas.usda.gov/opendatawebv2/. Four staple commodities, latest two selected marketing years, official code lookup joins. Records published separately only if at least 20 same-vintage comparable bulk records all agree; otherwise withhold. No live authenticated testing without credentials.
 - Secret HDX_HAPI_APP_IDENTIFIER, generated at https://hdx-hapi.readthedocs.io/en/latest/getting-started/.
 - Repository variable HDX_IPC_APPROVED_RESOURCE_IDS, comma-separated exact resource UUIDs only after verifying provider terms, attribution and public redistribution. No default clearance. IPC records are national level, by phase and assessment type, no overlapping totals.
 
