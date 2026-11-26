@@ -405,3 +405,29 @@ select, input[type="search"] {
   body { background: #fff; color: #000; }
   .card { border: 1px solid #999; }
 }
+
+/* Multi-commodity workspace: readable at mobile widths, no extra UI library. */
+.commodity-workspace { margin-bottom: 2rem; }
+.commodity-kicker { color: var(--accent); font-size: .85rem; font-weight: 650; letter-spacing: .04em; }
+.commodity-intro { padding-block: .5rem; }
+.commodity-filter { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,15rem),1fr)); gap: .8rem; padding: 1rem; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); margin: 1rem 0; }
+.commodity-filter p { grid-column: 1/-1; margin: 0; }
+.commodity-workspace label { display: block; font-weight: 600; color: var(--ink); }
+.commodity-workspace select { display:block; width:100%; min-height:44px; margin-top:.35rem; padding:.5rem; color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:6px; font:inherit; }
+.commodity-grid { display:grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,16rem),1fr)); gap: .9rem; margin: 1rem 0; }
+.commodity-panel { padding: 1rem; border: 1px solid var(--line); background: var(--card); border-radius: var(--radius); min-width: 0; overflow-wrap: anywhere; }
+.commodity-panel h3 { margin-top: 0; font-size:1rem; }
+.commodity-panel p:last-child { margin-bottom:0; }
+.commodity-value { font-size:1.35rem; }
+.commodity-table { overflow-x:auto; max-width:100%; margin:1rem 0; }
+.commodity-table table { width:100%; border-collapse:collapse; }
+.commodity-table th,.commodity-table td { padding:.55rem; border-bottom:1px solid var(--line); text-align:left; }
+.commodity-table caption { text-align:left; color:var(--ink-soft); font-size:.9rem; padding-bottom:.5rem; }
+.commodity-warning { padding:1rem; background:var(--attention-soft); border:1px solid var(--line); border-radius:var(--radius); }
+.commodity-controls input[type=range] { display:block; width:100%; accent-color:var(--accent); }
+.commodity-check { margin:1rem 0; }
+.commodity-check input { margin-right:.5rem; }
+.commodity-workspace details { margin-block:1rem; }
+.commodity-workspace summary { cursor:pointer; font-weight:650; }
+.commodity-workspace dd { margin:0 0 .6rem; }
+@media (max-width: 560px) { .commodity-filter,.commodity-grid { grid-template-columns:1fr; } .commodity-table { font-size:.86rem; } }
