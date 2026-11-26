@@ -1,0 +1,60 @@
+# Publish code changes against the most recent validated data snapshot.
+# Independent of upstream provider downloads. Refresh workflow still owns data.
+name: Publish website (validated snapshot)
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**.md"]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  deploy:
+    name: Build and deploy latest site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: gfso-pages-publication
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Fetch last validated release
+        run: |
+          git clone --depth 1 --branch data https://github.com/${{ github.repository }}.git data-branch
+          rm -rf public/data
+          cp -r data-branch/data public/data
+      - name: Verify release files and checksums
+        run: |
+          python - <<'PY'
+          import hashlib, json, pathlib
+          root = pathlib.Path("public/data")
+          manifest = json.loads((root / "manifest.json").read_text())
+          for f in manifest["files"]:
+              p = root / f["name"]
+              b = p.read_bytes()
+              assert len(b) == f["bytes"], f"Size mismatch: {p}"
+              assert hashlib.sha256(b).hexdigest() == f["sha256"], f"Checksum mismatch: {p}"
+          print("Verified release", manifest["release_id"])
+          PY
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4

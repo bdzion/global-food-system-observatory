@@ -100,6 +100,8 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
   const title = {overview:"A connected global food system",explore:"Explore global food-system evidence",stress:"What if shipments stopped?"}[mode];
   const groupOf = (id:string) => products[id].group || (id === "soybeans" ? "oils" : "staples");
   const groups = [["all","All products"],["staples","Staple crops"],["oils","Oilseeds & edible oils"],["pulses","Pulses"],["animal","Animal-source foods"],["fresh","Fresh foods"]];
+  const visibleProducts = Object.entries(products).filter(([id])=>group==="all"||groupOf(id)===group);
+  const publishedCount = Object.values(products).filter(p=>Object.keys(p.countries).length>0).length;
   return <section className="commodity-workspace">
     <div className="commodity-intro">
       <p className="commodity-kicker">A research project · not an official warning system</p>
@@ -114,8 +116,10 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
     {(mode === "overview" || mode === "explore") && <WorldEvidenceMap product={product} selected={geo} onSelect={id=>select(key,id)}/>}
     {mode === "overview" && <>
       <h2>What we cover</h2>
+      <p className="figure-note">This validated data release contains {publishedCount} product forms with country records. Website features and data releases update separately; additional registered commodities appear here only after successful data validation.</p>
       <div className="product-groups" aria-label="Filter product catalogue">{groups.map(([id,label])=><button key={id} className="visual-button" aria-pressed={group===id} onClick={()=>setGroup(id)}>{label}</button>)}</div>
-      <div className="commodity-grid">{Object.entries(products).filter(([id])=>group==="all"||groupOf(id)===group).map(([id,p]) => <article className="commodity-panel" key={id}>
+      {visibleProducts.length===0&&<p role="status">No validated data for this group in this release. This is a coverage gap, not an indication that the group has no production or trade. See Data &amp; Methods for planned sources.</p>}
+      <div className="commodity-grid">{visibleProducts.map(([id,p]) => <article className="commodity-panel" key={id}>
         <h3>{p.name}</h3><p>{p.role}</p><p><strong>{Object.keys(p.countries).length}</strong> country records · {p.year ?? "no year"}</p>
         <p>{p.price ? <>{p.price.plain_name}: {number(p.price.latest_value, 1)} {p.price.unit} ({monthWords(p.price.latest_period)})</> : "No benchmark price connected for this product"}</p>
         <a href={href("commodities", undefined, {commodity:id, geo})}>Explore {p.name.toLowerCase()}</a>
