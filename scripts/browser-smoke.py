@@ -1,0 +1,29 @@
+"""Actual Chromium verification of built site against a validated snapshot."""
+import os
+from playwright.sync_api import sync_playwright
+URL=os.environ.get("GFSO_TEST_URL","http://127.0.0.1:4173/global-food-system-observatory/")
+with sync_playwright() as p:
+    browser=p.chromium.launch()
+    for width,height in [(1440,900),(390,844)]:
+        page=browser.new_page(viewport={"width":width,"height":height})
+        errors=[]
+        page.on("pageerror",lambda e:errors.append(str(e)))
+        for route,title in [("home","Global situation room"),("commodities?commodity=maize&geo=CAN","Explore global food-system evidence"),("watch","Signals and decision opportunities"),("stress?commodity=wheat&geo=BGD","What if shipments stopped?"),("briefs","Evidence-to-action brief"),("how","Evidence coverage and reliability")]:
+            page.goto(URL+"#/"+route,wait_until="domcontentloaded")
+            page.get_by_role("heading",name=title,exact=True).wait_for(timeout=30000)
+            page.wait_for_timeout(300)
+            assert not page.locator("body").inner_text().startswith("Nothing is being shown"),route
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth + 4"),f"Horizontal overflow {width} {route}"
+            print(width,route,"rendered")
+        page.goto(URL+"#/commodities?commodity=wheat&geo=CAN")
+        page.get_by_label("Commodity",exact=True).wait_for(timeout=30000)
+        page.get_by_label("Commodity",exact=True).select_option("maize")
+        page.get_by_role("heading",name="Explore global food-system evidence",exact=True).wait_for(timeout=30000)
+        assert page.get_by_label("Commodity",exact=True).input_value()=="maize"
+        page.get_by_label("Country",exact=True).select_option("BGD")
+        page.get_by_role("link",name="Watch",exact=True).click()
+        page.get_by_role("heading",name="Signals and decision opportunities",exact=True).wait_for(timeout=30000)
+        assert page.get_by_label("Country",exact=True).input_value()=="BGD"
+        assert not errors,errors
+        page.close()
+    browser.close()

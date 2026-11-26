@@ -12,7 +12,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import SCHEMA_VERSION, build, core, commodities, intelligence, external, api_evidence
+from . import SCHEMA_VERSION, build, core, commodities, intelligence, external, api_evidence, spatial, validation, authenticated
 
 
 class GateFailed(RuntimeError):
@@ -156,6 +156,9 @@ def main(argv: list[str] | None = None) -> int:
     release["country-context"] = intelligence.context(release["commodity-index"]["country_names"])
     release["external-evidence"] = external.gather(args.cache)
     release["api-evidence"] = api_evidence.gather()
+    release["spatial-evidence"] = spatial.gather(args.cache)
+    release["scientific-validation"] = validation.evaluate(data["pink"])
+    release["authenticated-evidence"] = authenticated.gather()
 
     problems = checks(release)
     if problems:

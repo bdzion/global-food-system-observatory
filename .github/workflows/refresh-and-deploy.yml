@@ -79,6 +79,9 @@ jobs:
         working-directory: pipeline
         env:
           GFSO_CACHE: ${{ github.workspace }}/.cache
+          USDA_FAS_API_KEY: ${{ secrets.USDA_FAS_API_KEY }}
+          HDX_HAPI_APP_IDENTIFIER: ${{ secrets.HDX_HAPI_APP_IDENTIFIER }}
+          HDX_IPC_APPROVED_RESOURCE_IDS: ${{ vars.HDX_IPC_APPROVED_RESOURCE_IDS }}
         run: python -m gfso.run --out ../data-branch/data
 
       - name: Save the release to the data branch
