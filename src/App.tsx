@@ -134,7 +134,7 @@ export function App() {
             {current === "commodities" ? <p><a href={href("countries")}>Detailed wheat country figures</a></p> : null}
             {current === "watch" ? <><DecisionIntelligence key="watch" release={state.release} route={route} mode="watch"/><SystemPathways/><p><a href={href("chain")}>Detailed wheat supply-chain analysis</a> · <a href={href("assumptions")}>Assumptions behind the wheat scenario</a></p></> : null}
             {current === "briefs" ? <DecisionIntelligence key="briefs" release={state.release} route={route} mode="briefs"/> : null}
-            {current === "how" ? <><DecisionIntelligence key="methods" release={state.release} route={route} mode="methods"/><SourceAtlas release={state.release}/></> : null}
+            {current === "how" ? <><HowItWorks release={state.release}/><DecisionIntelligence key="methods" release={state.release} route={route} mode="methods"/><SourceAtlas release={state.release}/></> : null}
             {current === "countries" && !route.id ? (
               <Countries release={state.release} />
             ) : null}
@@ -149,7 +149,6 @@ export function App() {
               />
             ) : null}
             {current === "assumptions" ? <Assumptions release={state.release} /> : null}
-            {current === "how" ? <HowItWorks release={state.release} /> : null}
 
             {!NAV.some((n) => n.page === current) && !["country","countries","chain","what-if","assumptions","commodities","wheat"].includes(route.page) ? (
               <>

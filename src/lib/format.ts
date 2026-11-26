@@ -81,3 +81,14 @@ export function changeWords(value: number | null | undefined): string {
   const direction = value > 0 ? "higher" : "lower";
   return `${Math.abs(value).toFixed(0)}% ${direction} than a year earlier`;
 }
+
+/** "2026M10" as "Oct 2026", for chart axes where the long form will not fit. */
+export function monthShort(period: string | null | undefined): string {
+  if (!period) return NOT_AVAILABLE;
+  const text = period.replace("M", "-");
+  const [year, month] = text.split("-");
+  const index = Number(month) - 1;
+  return index >= 0 && index < 12
+    ? `${MONTHS[index].slice(0, 3)} ${year}`
+    : period;
+}

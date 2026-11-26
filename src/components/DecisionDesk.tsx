@@ -1,7 +1,8 @@
+import { monthWords } from "../lib/format";
 import {useEffect,useState} from "react";
 import {hasFile,readVerified} from "../lib/data";
 import {href} from "../lib/router";
-import {priceAge,type CommodityRelease} from "../lib/commodities";
+import { type CommodityRelease} from "../lib/commodities";
 import type {Release} from "../lib/types";
 type Climate={status:string;period_start?:string;period_end?:string;countries:Record<string,{anomaly_mm:number;anomaly_pct:number|null;coverage:number;valid_cells:number}>};
 type Market={product:string;commodity:string;market:string;currency:string;unit:string;points:{period:string;value:number}[]};
@@ -28,11 +29,11 @@ export function DecisionDesk({release,data,geo,commodity,country,mode}:{release:
  const skill=price&&validation.value?.rows.find(v=>v.id===price.id);
  const selected=geo!=="global"&&!!p;
  const cards=[
- {title:"International reference price",value:price?fmt(price.latest_value)+" "+price.unit:"Unknown",date:price?price.latest_period+" · "+priceAge(price.latest_period):"No mapped benchmark",detail:price?price.climb_reading.words+" This is not a domestic price.":"No exact product benchmark connected.",source:"World Bank Pink Sheet",url:"https://www.worldbank.org/en/research/commodity-markets"},
+ {title:"International reference price",value:price?fmt(price.latest_value)+" "+price.unit:"Unknown",date:price?monthWords(price.latest_period):"No international price for this food",detail:price?price.climb_reading.words+" This is not a domestic price.":"No exact product benchmark connected.",source:"World Bank Pink Sheet",url:"https://www.worldbank.org/en/research/commodity-markets"},
  {title:"Reliance on imports",value:row?fmt(row.gross_import_share_pct)+(row.gross_import_share_pct==null?"":"%"):"Unknown",date:row?String(row.year):"No aligned country-product record",detail:"Imports divided by available supply. Supplier concentration (0–1): "+fmt(row?.supplier_hhi,3)+". Higher concentration means more reliance on a few suppliers, not a prediction of interruption.",source:"FAOSTAT",url:"https://www.fao.org/faostat/en/"},
  {title:"Estimated months of stocks",value:row?fmt(row.estimated_cover_months)+(row.estimated_cover_months==null?"":" months"):"Unknown",date:row?String(row.year):"No country-product record",detail:"An estimate, not a count of stocks that can be released. Not calculated for fresh or animal foods.",source:"FAOSTAT",url:"https://www.fao.org/faostat/en/"},
- {title:"Rainfall compared with normal",value:rainfall?fmt(rainfall.anomaly_mm)+" mm":"Unknown",date:rainfall?climate.value?.period_start+"–"+climate.value?.period_end:"No eligible country summary",detail:rainfall?"Departure from normal; "+rainfall.valid_cells+" valid grid centres. Not crop-specific.":"No local crop exposure inferred.",source:"NOAA GPCP",url:"https://psl.noaa.gov/data/gridded/data.gpcp.html"},
- {title:"Local retail price",value:last&&first?fmt(last.value)+" "+first.currency+"/"+first.unit:"Unknown",date:last?last.period+" · "+priceAge(last.period):"No matching local market figure",detail:first?first.commodity+" · "+first.market+". Same-month annual change: "+(yoy==null?"unknown":fmt(yoy)+"%")+". One market series, not a national average.":"No substitute geography or product is used.",source:"WFP / HDX",url:market?.url||"https://data.humdata.org/visualization/wfp-food-price/"},
+ {title:"Rainfall compared with normal",value:rainfall?fmt(rainfall.anomaly_mm)+" mm":"Unknown",date:rainfall?monthWords(climate.value?.period_start)+" to "+monthWords(climate.value?.period_end):"No country summary available",detail:rainfall?"Departure from normal; "+rainfall.valid_cells+" valid grid centres. Not crop-specific.":"No local crop exposure inferred.",source:"NOAA GPCP",url:"https://psl.noaa.gov/data/gridded/data.gpcp.html"},
+ {title:"Local retail price",value:last&&first?fmt(last.value)+" "+first.currency+"/"+first.unit:"Unknown",date:last?monthWords(last.period):"No local market figure for this food",detail:first?first.commodity+" · "+first.market+". Same-month annual change: "+(yoy==null?"unknown":fmt(yoy)+"%")+". One market series, not a national average.":"No substitute geography or product is used.",source:"WFP / HDX",url:market?.url||"https://data.humdata.org/visualization/wfp-food-price/"},
  {title:"Reported hazards",value:ext.value?.gdacs?.status==="available"?String(hazards.length):"Unknown",date:"Retrieved event subset",detail:"Events are linked to the country, not necessarily farms. Zero reports does not prove there were no hazards.",source:"GDACS",url:"https://www.gdacs.org/"},
  ];
  const feeds=[
@@ -44,7 +45,7 @@ export function DecisionDesk({release,data,geo,commodity,country,mode}:{release:
  ["NOAA RONI",api.value?.enso.status||api.state,"Seasonal index"],
  ["NASA POWER",api.value?.climate.status||api.state,"Pilot points"],
  ["WFP / HDX retail",api.value?.domestic.countries.some(c=>c.status==="available")?"available (pilot)":api.value?"no eligible series":api.state,"Pilot markets"],
- ["GPCP spatial",climate.value?.status||climate.state,climate.value?.period_end||"Three-month departure"],
+ ["Rainfall maps",climate.value?.status||climate.state,climate.value?.period_end?monthWords(climate.value.period_end):"Three-month departure"],
  ["Historical evaluation",validation.value?.status||validation.state,"Revised-price backtest"],
  ["USDA authenticated",auth.value?.usda.status||auth.state,"Credential / reconciliation"],
  ["HDX IPC authenticated",auth.value?.hapi.status||auth.state,"Credential / rights"],
@@ -65,6 +66,6 @@ export function DecisionDesk({release,data,geo,commodity,country,mode}:{release:
  {selected?<><div className="decision-grid">{cards.map(c=><article className="source-tile" key={c.title}><h3>{c.title}</h3><strong className="commodity-value">{c.value}</strong><p className="figure-note">{c.date}</p><p>{c.detail}</p><a href={c.url}>{c.source}</a></article>)}</div>
  {skill&&<p className="figure-note"><strong>How well did the price rule work in the past?</strong> {skill.screen.n} historical test months; share of flagged months followed by a rise: {skill.screen.precision==null?"undefined":fmt(skill.screen.precision*100)+"%"}; share of price rises identified: {skill.screen.recall==null?"undefined":fmt(skill.screen.recall*100)+"%"}. Tested on revised past prices, not a reliable forecast.</p>}
  <h3>Questions to answer before acting</h3><ol>{questions.map(q=><li key={q}>{q}</li>)}</ol><div className="product-groups"><a className="visual-button" href={href("commodities",undefined,{commodity,geo})}>Check suppliers and stocks</a><a className="visual-button" href={href("stress",undefined,{commodity,geo})}>Compare possible timelines</a><button className="visual-button" onClick={download}>Download country brief</button></div></>:<p>Choose one country and food above to see prices, imports, stocks, rainfall and reported hazards together. You can download a short dated brief.</p>}</>}
- <details open={mode==="methods"}><summary>Which sources supplied figures in this update?</summary><p className="figure-note">A working source may still have old or incomplete figures. Some sources require permission.</p><div className="commodity-table"><table><caption>Provider status · release {release.manifest.release_id}</caption><thead><tr><th>Data service</th><th>Status</th><th>What it covers</th></tr></thead><tbody>{feeds.map(([name,status,scope])=><tr key={name}><th scope="row">{name}</th><td>{status.replaceAll("_"," ")}</td><td>{scope}</td></tr>)}</tbody></table></div></details>
+ <details open={mode==="methods"}><summary>Which sources supplied figures in this update?</summary><p className="figure-note">A working source may still have old or incomplete figures. Some sources require permission.</p><div className="commodity-table" tabIndex={0}><table><caption>Provider status · release {release.manifest.release_id}</caption><thead><tr><th>Data service</th><th>Status</th><th>What it covers</th></tr></thead><tbody>{feeds.map(([name,status,scope])=><tr key={name}><th scope="row">{name}</th><td>{status.replaceAll("_"," ")}</td><td>{scope}</td></tr>)}</tbody></table></div></details>
  </section>;
 }

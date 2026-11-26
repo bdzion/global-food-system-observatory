@@ -105,7 +105,7 @@ export function DataTable<T>({
     );
   }
   return (
-    <div className="table-wrap">
+    <div className="table-wrap" tabIndex={0}>
       <table>
         <caption>{caption}</caption>
         <thead>

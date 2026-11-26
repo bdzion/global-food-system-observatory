@@ -119,7 +119,7 @@ export function WhatIf({ release, preselect }: { release: Release; preselect?: s
         <p>{scenario.what_this_is_not}</p>
       </Notice>
 
-      <h2>Set it up</h2>
+      <h2>Describe the interruption</h2>
       <div className="grid cols-2">
         <div>
           <label className="field">

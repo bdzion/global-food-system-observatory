@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { priceAge, type Commodity, type CommodityProfile } from "../lib/commodities";
+import { monthShort, monthWords } from "../lib/format";
+import { type Commodity, type CommodityProfile } from "../lib/commodities";
 import type { Price } from "../lib/types";
 
 type MapCountry = { iso3: string; name: string; d: string };
@@ -49,7 +50,7 @@ export function WorldEvidenceMap({product, selected, onSelect}: {product: Commod
   const joined=geometry ? new Set(geometry.countries.map(c=>c.iso3)) : null;
   const unmapped=joined?rows.filter(r=>!joined.has(r.iso3)&&r[metric]!=null).length:0;
   return <section className="visual-panel">
-    <div className="visual-head"><div><p className="commodity-kicker">Where food is produced and traded</p><h2>Global {product.name.toLowerCase()} map</h2></div>
+    <div className="visual-head"><div><p className="commodity-kicker">Who grows it, who buys it</p><h2>Where the world’s {product.name.toLowerCase()} comes from</h2></div>
       <label>Map indicator<select value={metric} onChange={e=>setMetric(e.target.value as Metric)}>{Object.entries(METRICS).map(([id,m])=><option key={id} value={id}>{m.label}</option>)}</select></label></div>
     <p className="figure-note">{meta.label} · {product.year??"unknown year"} · FAOSTAT. Click a country or use the country selector above. Darker colours show larger values, not greater risk.</p>
     <label>Map colour scale<select value={scale} onChange={e=>setScale(e.target.value)}><option value="relative">Equal value ranges</option><option value="quantile">Equal numbers of countries (approximately)</option></select></label>
@@ -98,17 +99,17 @@ export function SeriesChart({title,series,unit}: {title:string;series:{name:stri
   return <section className="visual-panel"><h3>{title}</h3>
     <svg viewBox="0 0 650 215" className="evidence-chart" role="img" aria-label={title+"; "+unit+"; values also available in the tables"}>
       {[0,.25,.5,.75,1].map(f=>{const v=min+(max-min)*f;return <g key={f}><line x1="65" x2="620" y1={y(v)} y2={y(v)} stroke="var(--line)"/><text x="59" y={y(v)+4} textAnchor="end" fontSize="10" fill="currentColor">{new Intl.NumberFormat("en",{notation:"compact",maximumFractionDigits:1}).format(v)}</text></g>})}
-      {series.map((s,si)=>{const lookup=new Map(s.points.map(p=>[p.period,p.value]));let paths:string[]=[];let d="";periods.forEach((p,i)=>{const v=lookup.get(p);if(v==null||!Number.isFinite(v)){if(d)paths.push(d);d="";return;}d+=(d?" L":"M")+x(i)+","+y(v);});if(d)paths.push(d);return <g key={s.name}>{paths.map((path,i)=><path key={i} d={path} stroke={palette[si%palette.length]} strokeWidth="2.5" fill="none"/>)}{periods.map((p,i)=>{const v=lookup.get(p);return v==null?null:<circle key={p} cx={x(i)} cy={y(v)} r={p===chosen?4:2} fill={palette[si%palette.length]}><title>{s.name} · {p}: {val(v,unit)}</title></circle>})}</g>})}
-      {periods.map((p,i)=>(i===0||i===periods.length-1||i%Math.max(1,Math.ceil(periods.length/5))===0)?<text key={p} x={x(i)} y="202" textAnchor="middle" fontSize="10" fill="currentColor">{p}</text>:null)}
+      {series.map((s,si)=>{const lookup=new Map(s.points.map(p=>[p.period,p.value]));let paths:string[]=[];let d="";periods.forEach((p,i)=>{const v=lookup.get(p);if(v==null||!Number.isFinite(v)){if(d)paths.push(d);d="";return;}d+=(d?" L":"M")+x(i)+","+y(v);});if(d)paths.push(d);return <g key={s.name}>{paths.map((path,i)=><path key={i} d={path} stroke={palette[si%palette.length]} strokeWidth="2.5" fill="none"/>)}{periods.map((p,i)=>{const v=lookup.get(p);return v==null?null:<circle key={p} cx={x(i)} cy={y(v)} r={p===chosen?4:2} fill={palette[si%palette.length]}><title>{s.name} · {monthWords(p)}: {val(v,unit)}</title></circle>})}</g>})}
+      {periods.map((p,i)=>(i===0||i===periods.length-1||i%Math.max(1,Math.ceil(periods.length/5))===0)?<text key={p} x={x(i)} y="202" textAnchor="middle" fontSize="10" fill="currentColor">{monthShort(p)}</text>:null)}
     </svg>
     <div className="map-legend">{series.map((s,i)=><span key={s.name}><i style={{background:palette[i%palette.length]}}/>{s.name}</span>)}</div>
-    <label>Inspect period<select value={chosen} onChange={e=>setActive(e.target.value)}>{periods.map(p=><option key={p}>{p}</option>)}</select></label>
-    <p className="map-readout" aria-live="polite">{chosen}: {series.map(s=>s.name+" "+val(s.points.find(p=>p.period===chosen)?.value,unit)).join(" · ")}</p>
+    <label>Inspect month<select value={chosen} onChange={e=>setActive(e.target.value)}>{periods.map(p=><option key={p} value={p}>{monthWords(p)}</option>)}</select></label>
+    <p className="map-readout" aria-live="polite">{monthWords(chosen)}: {series.map(s=>s.name+" "+val(s.points.find(p=>p.period===chosen)?.value,unit)).join(" · ")}</p>
   </section>;
 }
 
 export function PriceTrend({price}:{price:Price|null}) {
-  return price?<><p className="figure-note">Last benchmark observation: {price.latest_period} · {priceAge(price.latest_period)}. Historical and delayed series are excluded from current signals.</p><SeriesChart title={price.plain_name+" — monthly history"} unit={price.unit} series={[{name:price.plain_name,points:price.history}]}/></>:<p className="figure-note">No international benchmark price connected for this exact product.</p>;
+  return price?<><p className="figure-note">Latest reading: {monthWords(price.latest_period)}. Historical and delayed series are excluded from current signals.</p><SeriesChart title={price.plain_name+" — monthly history"} unit={price.unit} series={[{name:price.plain_name,points:price.history}]}/></>:<p className="figure-note">No international benchmark price connected for this exact product.</p>;
 }
 
 export function CountryTrends({profile}:{profile:CommodityProfile}) {
