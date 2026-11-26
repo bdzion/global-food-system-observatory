@@ -12,7 +12,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import SCHEMA_VERSION, build, core, commodities
+from . import SCHEMA_VERSION, build, core, commodities, intelligence
 
 
 class GateFailed(RuntimeError):
@@ -93,6 +93,7 @@ def publish(release: dict, out: Path, release_id: str) -> dict:
     files = []
     for name, payload in release.items():
         path = out / f"{name}.json"
+        path.parent.mkdir(parents=True, exist_ok=True)
         core.write_json(path, payload)
         files.append(
             {
@@ -121,6 +122,8 @@ def publish(release: dict, out: Path, release_id: str) -> dict:
             "price_series": len(release["world"]["prices"]),
             "assumptions_checked": len(release["ledger"]["assumptions"]),
             "assumptions_broken": release["ledger"]["broken_count"],
+            "product_forms": len(release.get("commodity-index",{}).get("coverage",{})),
+            "product_country_profiles": sum(c["countries"] for c in release.get("commodity-index",{}).get("coverage",{}).values()),
         },
     }
     core.write_json(out / "manifest.json", manifest)
@@ -148,6 +151,9 @@ def main(argv: list[str] | None = None) -> int:
     release = build.assemble(data)
     # Additive contract: keep every legacy wheat payload unchanged.
     release["commodities"] = commodities.build_extension(args.cache, data)
+    release.update(intelligence.compact_views(release["commodities"]))
+    release["signals"] = intelligence.signals(release["world"])
+    release["country-context"] = intelligence.context(release["commodity-index"]["country_names"])
 
     problems = checks(release)
     if problems:

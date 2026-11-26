@@ -14,6 +14,8 @@ and a few megabytes of memory.
 from __future__ import annotations
 
 import csv
+import hashlib
+import time
 import io
 import zipfile
 from pathlib import Path
@@ -38,8 +40,10 @@ def catalogue(cache: Path | None = None) -> dict[str, dict]:
     """Every bulk dataset FAOSTAT offers, keyed by its dataset code."""
     cache = cache or core.cache_dir()
     path = cache / "faostat_catalogue.json"
-    if not path.exists():
-        core.fetch(CATALOGUE, dest=path)
+    # Refresh the small catalogue once per six hours; retain the last good
+    # release on failure rather than labelling cached data as newly retrieved.
+    if not path.exists() or time.time() - path.stat().st_mtime > 6 * 3600:
+        core.fetch(CATALOGUE, dest=path, timeout=90)
     data = core.read_json(path)
     if not data:
         raise core.SourceError("the FAOSTAT catalogue could not be read")
@@ -60,8 +64,11 @@ def dataset_file(code: str, cache: Path | None = None) -> tuple[Path, dict]:
         raise core.SourceError(f"FAOSTAT has no bulk dataset called {code}")
     url = entry["FileLocation"]
     dest = cache / Path(url.split("/")[-1])
-    if not dest.exists():
+    stamp = dest.with_suffix(dest.suffix + ".version")
+    version = hashlib.sha256((url + "|" + str(entry.get("DateUpdate"))).encode()).hexdigest()
+    if not dest.exists() or not stamp.exists() or stamp.read_text() != version:
         core.fetch(url, dest=dest)
+        stamp.write_text(version)
     return dest, entry
 
 

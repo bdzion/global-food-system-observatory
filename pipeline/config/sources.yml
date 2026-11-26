@@ -123,9 +123,9 @@ sources:
     evidence_class: observation
     expected_frequency: annual
     stale_after_days: 800
-    plain_name: Foreign currency reserves, imports and population
+    plain_name: Foreign currency reserves, imports, population, water stress, irrigation, nutrition, electricity and fertilizer use
     caveat: >-
-      National figures. A country holding plenty of foreign currency does not
+      National figures, observation years differ. Water stress and electricity access are structural context, not current drought or cold-chain measures. A country holding plenty of foreign currency does not
       mean its households can afford food.
     status: validated_connector
 

@@ -234,8 +234,14 @@ def growth_anomaly(
     pts = [(p, v) for p, v in series if v is not None and v > 0]
     if len(pts) < min_points:
         return None
-    pts = pts[-window_months:]
-    vals = [v for _, v in pts]
+    def index(period):
+        y, m = period.replace("M", "-").split("-")
+        return int(y) * 12 + int(m) - 1
+    by_month = {index(p): v for p, v in pts}
+    end = max(by_month)
+    by_month = {m: v for m, v in by_month.items() if m >= end - window_months + 1}
+    if end - 1 not in by_month or end - 12 not in by_month:
+        return None
 
     def _standardised(growth: list[float]) -> float | None:
         if len(growth) < 24:
@@ -247,12 +253,10 @@ def growth_anomaly(
             return None
         return (now - med) / (1.4826 * mad)
 
-    mom = [
-        (vals[i] - vals[i - 1]) / vals[i - 1] for i in range(1, len(vals))
-    ]
-    yoy = [
-        (vals[i] - vals[i - 12]) / vals[i - 12] for i in range(12, len(vals))
-    ]
+    def growth(lag):
+        return [(v - by_month[m-lag]) / by_month[m-lag]
+                for m, v in sorted(by_month.items()) if m-lag in by_month]
+    mom, yoy = growth(1), growth(12)
     cm, cy = _standardised(mom), _standardised(yoy)
     if cm is None or cy is None:
         return None

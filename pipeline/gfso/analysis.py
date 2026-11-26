@@ -276,6 +276,16 @@ def reserve_cover(iso: str, economy: dict) -> dict | None:
 # ---------------------------------------------------------------- world prices
 
 
+def month_index(period: str) -> int:
+    year, month = period.replace("M", "-").split("-")
+    return int(year) * 12 + int(month) - 1
+
+
+def price_freshness(period: str, reference: str) -> str:
+    lag = month_index(reference) - month_index(period)
+    return "current" if 0 <= lag <= 2 else "delayed" if 2 < lag <= 6 else "historical"
+
+
 def price_signals(pink: dict) -> dict:
     """The monthly world prices, each with how unusual its recent climb is.
 
@@ -286,6 +296,8 @@ def price_signals(pink: dict) -> dict:
     """
     periods = pink["periods"]
     out = {}
+    now = core.utc_now()
+    reference = f"{now.year:04d}M{now.month:02d}"
     for sid, values in pink["series"].items():
         pairs = [(p, v) for p, v in zip(periods, values)]
         recent = [(p, v) for p, v in pairs if v is not None]
@@ -296,7 +308,8 @@ def price_signals(pink: dict) -> dict:
         if len(recent) > 12:
             want = f"{int(latest_period[:4]) - 1}M{latest_period[5:]}"
             year_ago = next((v for p, v in recent if p == want), None)
-        anomaly = core.growth_anomaly(recent)
+        freshness = price_freshness(latest_period, reference)
+        anomaly = core.growth_anomaly(recent) if freshness == "current" else None
         out[sid] = {
             "id": sid,
             "plain_name": pink["meta"][sid]["plain"],
@@ -306,9 +319,11 @@ def price_signals(pink: dict) -> dict:
             "latest_value": core.rnd(latest_value, 1),
             "change_over_year_pct": core.rnd(core.pct_change(latest_value, year_ago), 1),
             "climb_anomaly": core.rnd(anomaly, 2),
-            "climb_reading": _climb_words(anomaly),
+            "freshness": freshness,
+            "assessment_period": reference,
+            "climb_reading": _climb_words(anomaly) if freshness == "current" else {"state": freshness, "words": "Not eligible for current signals; last observation is " + latest_period + "."},
             "history": [
-                {"period": p, "value": core.rnd(v, 1)} for p, v in recent[-60:]
+                {"period": p, "value": core.rnd(v, 1)} for p, v in [(p,v) for p,v in pairs if p <= latest_period][-60:]
             ],
         }
     return out
@@ -549,10 +564,12 @@ def ledger(scenario_config: dict, world: dict, countries: dict) -> dict:
 
         if watch.get("per_country"):
             broken_for = []
+            checked = 0
             for iso, country in countries.items():
                 value = _country_reading(indicator, country)
                 if value is None:
                     continue
+                checked += 1
                 if _crosses(value, watch):
                     broken_for.append(
                         {"iso3": iso, "name": country["name"], "reading": value}
@@ -567,7 +584,8 @@ def ledger(scenario_config: dict, world: dict, countries: dict) -> dict:
                     "scope": "per_country",
                     "watches": indicator,
                     "threshold": watch["value"],
-                    "state": "broken_somewhere" if broken_for else "holding",
+                    "state": "broken_somewhere" if broken_for else "holding" if checked else "cannot_check",
+                    "countries_checked": checked,
                     "broken_for": broken_for,
                     "checked_at": checked_at,
                 }
