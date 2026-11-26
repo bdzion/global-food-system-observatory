@@ -1,5 +1,5 @@
 import type { Release } from "../lib/types";
-import { ageWords, dateWords } from "../lib/format";
+import { ageWords, dateWords, monthWords } from "../lib/format";
 import { Column, DataTable, Source, Tag } from "../components/ui";
 
 export function HowItWorks({ release }: { release: Release }) {
@@ -165,7 +165,7 @@ export function HowItWorks({ release }: { release: Release }) {
       <ul>
         <li>Release {manifest.release_id}, put together {dateWords(manifest.generated_at_utc)}.</li>
         <li>{manifest.coverage.countries_profiled} countries profiled, for {countries.year}.</li>
-        <li>{manifest.coverage.price_series} world price series, to {world.situation.as_of}.</li>
+        <li>{manifest.coverage.price_series} world price series, to {monthWords(world.situation.as_of)}.</li>
         <li>
           {manifest.coverage.assumptions_checked} assumptions checked,{" "}
           {manifest.coverage.assumptions_broken} contradicted.

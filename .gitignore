@@ -10,3 +10,6 @@ __pycache__/
 # is what stops the repository growing by a release four times a day for as
 # long as the project runs. See docs/architecture.md, decision 2.
 public/data/
+
+# TypeScript incremental build state, not source.
+tsconfig.tsbuildinfo

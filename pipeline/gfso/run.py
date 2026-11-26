@@ -12,7 +12,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import SCHEMA_VERSION, build, core
+from . import SCHEMA_VERSION, build, core, commodities
 
 
 class GateFailed(RuntimeError):
@@ -82,6 +82,9 @@ def checks(release: dict) -> list[str]:
     if not ledger.get("assumptions"):
         problems.append("the assumption ledger is empty")
 
+    if "commodities" in release:
+        problems.extend(commodities.checks(release["commodities"]))
+
     return problems
 
 
@@ -143,6 +146,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print("Working out indicators, chains and the assumption ledger...", flush=True)
     release = build.assemble(data)
+    # Additive contract: keep every legacy wheat payload unchanged.
+    release["commodities"] = commodities.build_extension(args.cache, data)
 
     problems = checks(release)
     if problems:

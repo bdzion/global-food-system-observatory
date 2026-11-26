@@ -137,15 +137,25 @@ def _usable_stocks(
     if stocks is None:
         return None, None
 
-    # A big buyer recorded as holding a few days of wheat is not a country
+    # A big buyer recorded as holding a few days of grain is not a country
     # living hand to mouth; it is a country FAO has no real stock estimate for.
     # Japan, which runs a government wheat reserve, appears in this release with
     # about twelve thousand tonnes against five million tonnes of imports. That
     # is a placeholder, and reporting it as a buffer would invent a crisis.
-    if monthly_use and monthly_use > 0 and stocks / monthly_use < 0.25:
+    #
+    # The size condition matters and is not decoration. For a country using a
+    # few thousand tonnes a year, a week of use is a lorryload, and holding
+    # none of it is unremarkable rather than suspicious. Suppressing that would
+    # be the opposite error: hiding a real zero behind a doubt we do not have.
+    LARGE_BUYER_ANNUAL_T = 1_000_000
+    if (
+        monthly_use
+        and monthly_use * 12 >= LARGE_BUYER_ANNUAL_T
+        and stocks / monthly_use < 0.25
+    ):
         return None, (
             f"FAO's accounts record this country as holding under a week of "
-            f"wheat use in store at the start of {year}, against imports in the "
+            f"use in store at the start of {year}, against a supply in the "
             f"millions of tonnes. For a buyer this size that is almost certainly "
             f"a placeholder rather than an estimate, so we publish no stock "
             f"figure for it rather than one that would read as an emergency."

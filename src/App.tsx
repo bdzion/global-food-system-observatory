@@ -3,6 +3,7 @@ import { lastSeenRelease, loadRelease, rememberRelease, type LoadState } from ".
 import { href, useRoute } from "./lib/router";
 import { dateWords } from "./lib/format";
 import { Home } from "./pages/Home";
+import { CommodityWorkspace } from "./pages/CommodityWorkspace";
 import { Countries } from "./pages/Countries";
 import { CountryPage } from "./pages/CountryPage";
 import { ChainPage } from "./pages/ChainPage";
@@ -14,6 +15,7 @@ import { HowItWorks } from "./pages/HowItWorks";
  * "exposure analytics" or "systemic risk" means before they can find anything. */
 const NAV = [
   { page: "home", label: "What's happening" },
+  { page: "commodities", label: "Crops" },
   { page: "countries", label: "Countries" },
   { page: "chain", label: "How a shock travels" },
   { page: "what-if", label: "What if" },
@@ -47,7 +49,10 @@ export function App() {
     };
   }, []);
 
+  // A country profile belongs under Countries in the navigation, so the
+  // reader can see where they are rather than losing the highlight entirely.
   const current = route.page === "country" ? "countries" : route.page;
+  const active = current;
 
   return (
     <>
@@ -59,7 +64,7 @@ export function App() {
         <div className="masthead-inner">
           <a className="wordmark" href={href("home")}>
             Global Food System Observatory
-            <span>Where the world's wheat comes from, and what could interrupt it</span>
+            <span>Where the world's staple crops come from, and what could interrupt them</span>
           </a>
           <nav className="main" aria-label="Main">
             <ul>
@@ -67,7 +72,7 @@ export function App() {
                 <li key={item.page}>
                   <a
                     href={href(item.page)}
-                    aria-current={current === item.page ? "page" : undefined}
+                    aria-current={active === item.page ? "page" : undefined}
                   >
                     {item.label}
                   </a>
@@ -109,6 +114,13 @@ export function App() {
               </p>
             ) : null}
 
+            {current === "commodities" ? (
+              <CommodityWorkspace
+                release={state.release}
+                route={route}
+                mode={route.id === "what-if" ? "stress" : "overview"}
+              />
+            ) : null}
             {current === "home" ? <Home release={state.release} /> : null}
             {current === "countries" && !route.id ? (
               <Countries release={state.release} />
@@ -126,7 +138,7 @@ export function App() {
             {current === "assumptions" ? <Assumptions release={state.release} /> : null}
             {current === "how" ? <HowItWorks release={state.release} /> : null}
 
-            {!NAV.some((n) => n.page === current) && route.page !== "country" ? (
+            {!NAV.some((n) => n.page === current) && !["country","countries","chain","what-if","assumptions","commodities"].includes(route.page) ? (
               <>
                 <h1>That page is not here</h1>
                 <p>
