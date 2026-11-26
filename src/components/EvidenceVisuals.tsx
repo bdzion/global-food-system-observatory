@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Commodity, CommodityProfile } from "../lib/commodities";
+import { priceAge, type Commodity, type CommodityProfile } from "../lib/commodities";
 import type { Price } from "../lib/types";
 
 type MapCountry = { iso3: string; name: string; d: string };
@@ -27,6 +27,7 @@ export function WorldEvidenceMap({product, selected, onSelect}: {product: Commod
   const [geometry,setGeometry] = useState<Geometry | null>(null);
   const [error,setError] = useState(false);
   const [metric,setMetric] = useState<Metric>("imports_t");
+  const [scale,setScale]=useState("relative");
   const [hover,setHover] = useState<string | null>(null);
   useEffect(()=>{
     let cancelled=false;
@@ -40,6 +41,9 @@ export function WorldEvidenceMap({product, selected, onSelect}: {product: Commod
   const values=rows.map(r=>r[metric]).filter((v):v is number=>v!=null&&Number.isFinite(v)&&v>=0);
   const max=Math.max(0,...values);
   const meta=METRICS[metric];
+  const sorted=[...values].sort((a,b)=>a-b);
+  const limits=scale==="quantile"&&sorted.length?Array.from({length:5},(_,i)=>sorted[Math.min(sorted.length-1,Math.ceil(sorted.length*(i+1)/5)-1)]):Array.from({length:5},(_,i)=>max*(i+1)/5);
+  const bin=(v:number|null|undefined)=>v==null||!Number.isFinite(v)||v<0?-1:Math.max(0,limits.findIndex(t=>v<=t));
   const focus=hover || (selected!=="global"?selected:null);
   const current=focus?product.countries[focus]:undefined;
   const joined=geometry ? new Set(geometry.countries.map(c=>c.iso3)) : null;
@@ -47,12 +51,13 @@ export function WorldEvidenceMap({product, selected, onSelect}: {product: Commod
   return <section className="visual-panel">
     <div className="visual-head"><div><p className="commodity-kicker">Spatial evidence</p><h2>Global {product.name.toLowerCase()} atlas</h2></div>
       <label>Map indicator<select value={metric} onChange={e=>setMetric(e.target.value as Metric)}>{Object.entries(METRICS).map(([id,m])=><option key={id} value={id}>{m.label}</option>)}</select></label></div>
-    <p className="figure-note">{meta.label} · {product.year??"unknown year"} · FAOSTAT. Click a country or use the country selector above. Colours are relative to the observed maximum, not risk levels.</p>
+    <p className="figure-note">{meta.label} · {product.year??"unknown year"} · FAOSTAT. Click a country or use the country selector above. Map scale shows relative quantities, not risk levels.</p>
+    <label>Map classification<select value={scale} onChange={e=>setScale(e.target.value)}><option value="relative">Equal intervals</option><option value="quantile">Quantiles</option></select></label>
     {error?<p role="alert">Map geometry could not be loaded; use the country table and selector instead.</p>:!geometry?<p role="status">Loading country outlines…</p>:
       <svg className="evidence-map" viewBox={`0 0 ${geometry.width} ${geometry.height}`} role="group" aria-label={`World map of ${meta.label} for ${product.name}`} onPointerLeave={()=>setHover(null)}>
         <defs><pattern id="map-missing" width="6" height="6" patternUnits="userSpaceOnUse"><rect width="6" height="6" fill="#d7dbe0"/><path d="M0 6L6 0" stroke="#a6afb9" strokeWidth=".75"/></pattern></defs>
         {geometry.countries.map((c,i)=>{
-          const row=product.countries[c.iso3];const b=mapBin(row?.[metric],max);
+          const row=product.countries[c.iso3];const b=bin(row?.[metric]);
           return <path key={c.iso3+i} d={c.d} fill={b<0?"url(#map-missing)":COLORS[b]} stroke={selected===c.iso3?"#d06b27":"#ffffff"} strokeWidth={selected===c.iso3?2:.55} role="button" tabIndex={row?0:-1}
             aria-label={c.name+": "+val(row?.[metric],meta.unit)} aria-pressed={selected===c.iso3}
             onPointerEnter={()=>setHover(c.iso3)} onFocus={()=>setHover(c.iso3)} onBlur={()=>setHover(null)}
@@ -60,7 +65,7 @@ export function WorldEvidenceMap({product, selected, onSelect}: {product: Commod
             <title>{c.name}: {val(row?.[metric],meta.unit)}</title></path>;
         })}
       </svg>}
-    <div className="map-legend" aria-label="Map legend">{COLORS.map((color,i)=><span key={color}><i style={{background:color}}/>{i===0?"0–"+fmt(max/5):">"+fmt(max*i/5)+"–"+fmt(max*(i+1)/5)} {meta.unit}</span>)}<span><i className="missing-swatch"/>No observation</span></div>
+    <div className="map-legend" aria-label="Map legend">{COLORS.map((color,i)=><span key={color}><i style={{background:color}}/>{i===0?"0–"+fmt(limits[0]):">"+fmt(limits[i-1])+"–"+fmt(limits[i])} {meta.unit}</span>)}<span><i className="missing-swatch"/>No observation</span></div>
     <p className="map-readout" aria-live="polite">{focus?(current?.name??geometry?.countries.find(c=>c.iso3===focus)?.name??focus)+": "+val(current?.[metric],meta.unit):"Select or focus a country to inspect its value."}</p>
     <p className="figure-note">{values.length} country records with this indicator; {unmapped} observed records not joined to the simplified map. Stock cover is estimated, not verified reserves. Boundaries: <a href="https://www.naturalearthdata.com/about/">Natural Earth</a>, public domain; generalized de facto boundaries do not imply endorsement.</p>
     {selected!=="global"&&<button className="visual-button" onClick={()=>onSelect("global")}>Return to global view</button>}
@@ -78,7 +83,11 @@ export function RankedBars({title, rows, unit, onSelect}: {title:string; rows:{i
 type Point={period:string;value:number|null};
 export function SeriesChart({title,series,unit}: {title:string;series:{name:string;points:Point[]}[];unit:string}) {
   const [active,setActive]=useState<string|null>(null);
-  const periods=[...new Set(series.flatMap(s=>s.points.map(p=>p.period)))].sort();
+  const observed=[...new Set(series.flatMap(s=>s.points.map(p=>p.period)))].sort();
+  const monthly=observed.length>0&&observed.every(p=>/^\d{4}M\d{2}$/.test(p));
+  const yearly=observed.length>0&&observed.every(p=>/^\d{4}$/.test(p));
+  const idx=(p:string)=>monthly?Number(p.slice(0,4))*12+Number(p.slice(5))-1:Number(p);
+  const periods=(monthly||yearly)&&idx(observed[observed.length-1])-idx(observed[0])<1000?Array.from({length:idx(observed[observed.length-1])-idx(observed[0])+1},(_,i)=>{const n=idx(observed[0])+i;return monthly?Math.floor(n/12)+"M"+String(n%12+1).padStart(2,"0"):String(n)}):observed;
   const values=series.flatMap(s=>s.points.map(p=>p.value)).filter((v):v is number=>v!=null&&Number.isFinite(v));
   if(!values.length||!periods.length)return <section className="visual-panel"><h3>{title}</h3><p>No observations available.</p></section>;
   const min=Math.min(0,...values), max=Math.max(0,...values);
@@ -99,7 +108,7 @@ export function SeriesChart({title,series,unit}: {title:string;series:{name:stri
 }
 
 export function PriceTrend({price}:{price:Price|null}) {
-  return price?<SeriesChart title={price.plain_name+" — monthly history"} unit={price.unit} series={[{name:price.plain_name,points:price.history}]}/>:<p className="figure-note">No international benchmark price connected for this exact product.</p>;
+  return price?<><p className="figure-note">Last benchmark observation: {price.latest_period} · {priceAge(price.latest_period)}. Historical and delayed series are excluded from current signals.</p><SeriesChart title={price.plain_name+" — monthly history"} unit={price.unit} series={[{name:price.plain_name,points:price.history}]}/></>:<p className="figure-note">No international benchmark price connected for this exact product.</p>;
 }
 
 export function CountryTrends({profile}:{profile:CommodityProfile}) {

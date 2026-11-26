@@ -25,7 +25,7 @@ def context(countries):
                 params={"format":"json","per_page":20000,"mrnev":8}, timeout=30, attempts=1)
             if not isinstance(payload,list) or len(payload)<2 or not isinstance(payload[1],list):
                 raise ValueError("Unexpected indicator response")
-            if payload[0].get("pages", 1) != 1:
+            if int(payload[0].get("pages", 1)) != 1:
                 raise ValueError("Incomplete paginated indicator")
             records = {}
             for row in payload[1]:

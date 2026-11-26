@@ -323,7 +323,7 @@ def price_signals(pink: dict) -> dict:
             "assessment_period": reference,
             "climb_reading": _climb_words(anomaly) if freshness == "current" else {"state": freshness, "words": "Not eligible for current signals; last observation is " + latest_period + "."},
             "history": [
-                {"period": p, "value": core.rnd(v, 1)} for p, v in [(p,v) for p,v in pairs if p <= latest_period][-60:]
+                {"period": p, "value": core.rnd(v, 1)} for p, v in recent[-60:]
             ],
         }
     return out

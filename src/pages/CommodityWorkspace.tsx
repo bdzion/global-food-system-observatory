@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { WorldEvidenceMap, RankedBars, PriceTrend, CountryTrends } from "../components/EvidenceVisuals";
-import { loadCommodities, shipmentScenario, type CommodityRelease, type CommodityProfile } from "../lib/commodities";
+import { loadCommodities, shipmentScenario, priceAge, type CommodityRelease, type CommodityProfile } from "../lib/commodities";
 import { href, type Route } from "../lib/router";
 import { monthWords, tonnes } from "../lib/format";
 import type { Release } from "../lib/types";
@@ -39,6 +39,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
   const [stop, setStop] = useState(30);
   const [months, setMonths] = useState(6);
   const [replacement, setReplacement] = useState(40);
+  const [capacity, setCapacity] = useState(20);
   const [delay, setDelay] = useState(2);
   const [supplier, setSupplier] = useState("");
   const [compound, setCompound] = useState(false);
@@ -46,13 +47,14 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
 
   useEffect(() => {
     let cancelled = false;
-    loadCommodities(release.manifest).then(data => {
+    setResult({kind:"loading"});
+    loadCommodities(release.manifest,selected,mode==="stress"&&compound).then(data => {
       if (!cancelled) setResult(data ? { kind: "ready", data } : { kind: "legacy" });
     }).catch((error: unknown) => {
       if (!cancelled) setResult({ kind: "error", message: String(error) });
     });
     return () => { cancelled = true; };
-  }, [release.manifest]);
+  }, [release.manifest,selected,compound,mode]);
 
   useEffect(() => {
     const product = route.query.get("commodity");
@@ -92,9 +94,9 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
       .map(([id, p]) => {
         const buyer = p.countries[geo];
         const flow = buyer?.suppliers.find(s => s.iso3 === actualSupplier.iso3);
-        return { id, name: p.name, year: p.year, basis: buyer?.supplier_basis, flow: flow?.quantity_t,
-          early: flow ? shipmentScenario(flow.quantity_t, stop, months, replacement, 0) : null,
-          late: flow ? shipmentScenario(flow.quantity_t, stop, months, replacement, delay) : null };
+        return { id, name: p.name, year: buyer?.supplier_year??p.year, basis: buyer?.supplier_basis, flow: flow?.quantity_t,
+          early: flow ? shipmentScenario(flow.quantity_t, stop, months, replacement, 0, capacity) : null,
+          late: flow ? shipmentScenario(flow.quantity_t, stop, months, replacement, delay, capacity) : null };
       }) : [];
   const imports = [...countries].filter(c => c.imports_t != null).sort((a,b) => b.imports_t! - a.imports_t!);
   const title = {overview:"A connected global food system",explore:"Explore global food-system evidence",stress:"What if shipments stopped?"}[mode];
@@ -121,7 +123,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
       {visibleProducts.length===0&&<p role="status">No validated data for this group in this release. This is a coverage gap, not an indication that the group has no production or trade. See Data &amp; Methods for planned sources.</p>}
       <div className="commodity-grid">{visibleProducts.map(([id,p]) => <article className="commodity-panel" key={id}>
         <h3>{p.name}</h3><p>{p.role}</p><p><strong>{Object.keys(p.countries).length}</strong> country records · {p.year ?? "no year"}</p>
-        <p>{p.price ? <>{p.price.plain_name}: {number(p.price.latest_value, 1)} {p.price.unit} ({monthWords(p.price.latest_period)})</> : "No benchmark price connected for this product"}</p>
+        <p>{p.price ? <>{p.price.plain_name}: {number(p.price.latest_value, 1)} {p.price.unit} ({monthWords(p.price.latest_period)} · {priceAge(p.price.latest_period)})</> : "No benchmark price connected for this product"}</p>
         <a href={href("commodities", undefined, {commodity:id, geo})}>Explore {p.name.toLowerCase()}</a>
       </article>)}</div>
       <h2>Shared pressures: energy and fertilizer</h2><div className="commodity-grid">{Object.values(release.world.prices).filter(p => ["urea_price","dap_price","potash_price","oil_price","gas_price"].includes(p.id)).map(p => <article className="commodity-panel" key={p.id}><h3>{p.plain_name}</h3><strong>{number(p.latest_value,1)} {p.unit}</strong><p>{monthWords(p.latest_period)} · {percent(p.change_over_year_pct)} different from a year earlier</p></article>)}</div>
@@ -146,8 +148,8 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
         {profile.stock_note ? <p className="notice"><strong>Why there is no stock figure here. </strong>{profile.stock_note}</p> : null}
         <p className="figure-note">We never rank countries on the stock figures, and we do not treat them as grain a government could release tomorrow.</p>
         <h3>Who it buys from</h3>
-        <p>{profile.supplier_basis === "importer_reported" ? "This country reports its own purchases, so this is its own account of who it buys from." : profile.supplier_basis === "exporter_mirrored" ? "This country does not report its own purchases. The list below is pieced together from what other countries said they sold it, so it covers only the sellers who do report." : "Neither this country nor its suppliers report this trade in a form we can use."} The sellers below account for about {percent(profile.supplier_coverage_pct)} of what it is recorded as buying.</p>
-        {profile.suppliers.length ? <div className="commodity-table"><table><caption>Observed supplier flows · {profile.year}</caption><thead><tr><th>Supplier</th><th>Tonnes</th><th>Share</th><th>Where the figure comes from</th></tr></thead><tbody>{profile.suppliers.slice(0,15).map(s => <tr key={s.iso3}><th scope="row">{s.name}</th><td>{number(s.quantity_t)}</td><td>{percent(s.share_pct)}</td><td>{sourceWords(s.flag)}</td></tr>)}</tbody></table></div> : <p>No bilateral flow evidence.</p>}
+        <p>{profile.supplier_basis === "importer_reported" ? "This country reports its own purchases, so this is its own account of who it buys from." : profile.supplier_basis === "exporter_mirrored" ? "This country does not report its own purchases. The list below is pieced together from what other countries said they sold it, so it covers only the sellers who do report." : "Neither this country nor its suppliers report this trade in a form we can use."} {profile.supplier_year&&profile.supplier_year!==profile.year? "Supplier evidence is from "+profile.supplier_year+"; supply balance is from "+profile.year+". No cross-year coverage ratio is calculated.":profile.supplier_coverage_pct!=null?"Observed flows account for "+percent(profile.supplier_coverage_pct)+" of recorded imports.":"Comparable supplier coverage is unavailable."}</p>
+        {profile.suppliers.length ? <div className="commodity-table"><table><caption>Observed supplier flows · {profile.supplier_year??profile.year}</caption><thead><tr><th>Supplier</th><th>Tonnes</th><th>Share</th><th>Where the figure comes from</th></tr></thead><tbody>{profile.suppliers.slice(0,15).map(s => <tr key={s.iso3}><th scope="row">{s.name}</th><td>{number(s.quantity_t)}</td><td>{percent(s.share_pct)}</td><td>{sourceWords(s.flag)}</td></tr>)}</tbody></table></div> : <p>No bilateral flow evidence.</p>}
         <RankedBars title="Largest observed suppliers — share of reported bilateral flows" unit="%" rows={profile.suppliers.slice(0,8).map(s=>({id:s.iso3,name:s.name,value:s.share_pct}))}/>
         <CountryTrends profile={profile}/>
         <h3>Earlier years</h3><div className="commodity-table"><table><caption>Annual quantities in tonnes, same product form</caption><thead><tr><th>Year</th><th>Production</th><th>Imports</th><th>Exports</th></tr></thead><tbody>{profile.history.map(y => <tr key={y.year}><th scope="row">{y.year}</th><td>{number(y.production)}</td><td>{number(y.imports)}</td><td>{number(y.exports)}</td></tr>)}</tbody></table></div>
@@ -163,17 +165,19 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
           <label>How much of its shipments stop: {stop}%<input type="range" min="0" max="100" step="5" value={stop} onChange={e=>setStop(+e.target.value)}/></label>
           <label>For how long: {months} months<input type="range" min="1" max="12" value={months} onChange={e=>setMonths(+e.target.value)}/></label>
           <label>How much can be bought elsewhere: {replacement}%<input type="range" min="0" max="100" step="5" value={replacement} onChange={e=>setReplacement(+e.target.value)}/></label>
+          <label>Alternative supplier capacity (% of affected baseline): {capacity}%<input type="range" min="0" max="100" step="5" value={capacity} onChange={e=>setCapacity(+e.target.value)}/></label>
           <label>Months before anyone acts: {delay} months<input type="range" min="0" max="12" value={delay} onChange={e=>setDelay(+e.target.value)}/></label>
         </div>
         <label className="commodity-check"><input type="checkbox" checked={compound} onChange={e=>setCompound(e.target.checked)}/> Apply the same supplier disruption to other selected product forms as independent scenarios (not summed; rice forms never added together)</label>
         <div className="commodity-table"><table><caption>{nameFor(profile)} · conditional shipment gaps, metric tonnes; different products are not summed</caption><thead><tr><th>Commodity / year</th><th>Reporting basis</th><th>No action</th><th>Early action</th><th>Delayed action</th></tr></thead><tbody>{scenarioRows.map(s=><tr key={s.id}><th scope="row">{s.name} · {s.year ?? "unknown"}</th><td>{s.flow == null ? "Unknown" : s.basis?.replaceAll("_"," ")}</td><td>{t(s.early?.gross)}</td><td>{t(s.early?.residual)}</td><td>{t(s.late?.residual)}</td></tr>)}</tbody></table></div>
         {scenarioRows.map(s=>s.early&&s.late?<RankedBars key={s.id} title={s.name+" — remaining shipment gap"} unit="t" rows={[{id:"none",name:"No action",value:s.early.gross},{id:"early",name:"Early action",value:s.early.residual},{id:"late",name:"Delayed action",value:s.late.residual}]}/>:null)}
-        <p className="figure-note">Early action assumes replacement begins immediately; delayed action starts after the selected lead time. Replacement availability is hypothetical; the same supplier may serve competing buyers. No aggregation or substitution across products is inferred.</p>
+        <p className="figure-note">Early action assumes replacement begins immediately; delayed action starts after the selected lead time. Replacement is capped by the assumed alternative supplier capacity and available time; competing buyers and seasonal availability are not modelled. No aggregation or substitution across products is inferred.</p>
         <h3>Decision options and constraints</h3><div className="commodity-grid"><article className="commodity-panel"><strong>Importers</strong><p>Check alternative suppliers' exportable surplus, financing and transit time before purchasing.</p></article><article className="commodity-panel"><strong>Government</strong><p>Independently verify accessible reserves and assess targeted affordability support. Consider displacement of other buyers.</p></article></div>
       </>}
       <p><a href={href("what-if")}>The wheat what-if test, which also names who else would be bidding</a></p>
     </>}
     
+    {geo!=="global"&&mode==="explore"&&<p><a href={href("watch",undefined,{commodity:key,geo})}>Country context and relevant signals →</a> · <a href={href("briefs",undefined,{commodity:key,geo})}>Decision brief →</a></p>}
     <details className="commodity-panel"><summary>Evidence and methods</summary><dl>{Object.entries(method).map(([id,value])=><div key={id}><dt><strong>{id.replaceAll("_"," ")}</strong></dt><dd>{value}</dd></div>)}</dl><ul>{Object.entries(sources).map(([id,url])=><li key={id}><a href={url}>{id}</a>{Object.hasOwn(provider_updated,id) ? " · provider update "+(provider_updated[id] || "unknown") : ""}</li>)}</ul><p>Release {release.manifest.release_id}. Data dates differ by source. <a href={href("how")}>Data and methods</a></p></details>
     {mode !== "stress" && <p><a href={href("commodities","what-if",{commodity:key,geo})}>See what an interruption would mean →</a></p>}
   </section>;
