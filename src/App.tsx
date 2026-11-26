@@ -3,6 +3,7 @@ import { lastSeenRelease, loadRelease, rememberRelease, type LoadState } from ".
 import { href, useRoute } from "./lib/router";
 import { dateWords } from "./lib/format";
 import { Home } from "./pages/Home";
+import { ReaderGuide } from "./components/ReaderGuide";
 import { DecisionIntelligence } from "./components/DecisionIntelligence";
 import { SourceAtlas, SystemPathways } from "./components/SourceAtlas";
 import { CommodityWorkspace } from "./pages/CommodityWorkspace";
@@ -16,12 +17,12 @@ import { HowItWorks } from "./pages/HowItWorks";
 /* Navigation in plain words. Nobody arriving here should have to work out what
  * "exposure analytics" or "systemic risk" means before they can find anything. */
 const NAV = [
-  { page: "home", label: "Overview" },
-  { page: "commodities", label: "Explore" },
-  { page: "watch", label: "Watch" },
-  { page: "stress", label: "Stress Test" },
-  { page: "briefs", label: "Briefs" },
-  { page: "how", label: "Data & Methods" },
+  { page: "home", label: "The system" },
+  { page: "commodities", label: "The indicators" },
+  { page: "watch", label: "The threats" },
+  { page: "stress", label: "Possible timelines" },
+  { page: "briefs", label: "Country briefs" },
+  { page: "how", label: "Sources & methods" },
 ];
 
 export function App() {
@@ -73,7 +74,7 @@ export function App() {
           <nav className="main" aria-label="Main">
             <ul>
               {NAV.map((item) => (
-                <li key={item.page}>
+                <li key={item.page} className={["briefs","how"].includes(item.page)?"nav-secondary":"nav-primary"}>
                   <a
                     href={href(item.page,undefined,(()=>{try{const saved=JSON.parse(localStorage.getItem("gfso.commodity-context.v1")||"{}");return {commodity:route.query.get("commodity")||saved.commodity||"all",geo:route.query.get("geo")||saved.geo||"global"}}catch{return {} as Record<string,string>}})())}
                     aria-current={active === item.page ? "page" : undefined}
@@ -119,7 +120,7 @@ export function App() {
               </p>
             ) : null}
 
-            {current==="home" ? <DecisionIntelligence key="overview" release={state.release} route={route} mode="overview"/> : null}
+            {current==="home" ? <ReaderGuide release={state.release} route={route}/> : null}
             {["commodities","stress"].includes(current) ? (
               <CommodityWorkspace
                 release={state.release}
@@ -129,9 +130,9 @@ export function App() {
               />
             ) : null}
             {current === "wheat" ? <Home release={state.release} /> : null}
-            {current === "home" ? <><SystemPathways/><p><a href={href("wheat")}>Original wheat situation assessment</a> · <a href="https://bdzion.github.io/canada-food-system-observatory/#/">Canada Food System Observatory</a></p></> : null}
-            {current === "commodities" ? <p><a href={href("countries")}>Original wheat country profiles</a></p> : null}
-            {current === "watch" ? <><DecisionIntelligence key="watch" release={state.release} route={route} mode="watch"/><SystemPathways/><p><a href={href("chain")}>Original wheat transmission analysis</a> · <a href={href("assumptions")}>Wheat assumption ledger</a></p></> : null}
+            {current === "home" ? <><p>Related project: <a href="https://bdzion.github.io/canada-food-system-observatory/#/">Canada Food System Observatory</a></p></> : null}
+            {current === "commodities" ? <p><a href={href("countries")}>Detailed wheat country figures</a></p> : null}
+            {current === "watch" ? <><DecisionIntelligence key="watch" release={state.release} route={route} mode="watch"/><SystemPathways/><p><a href={href("chain")}>Detailed wheat supply-chain analysis</a> · <a href={href("assumptions")}>Assumptions behind the wheat scenario</a></p></> : null}
             {current === "briefs" ? <DecisionIntelligence key="briefs" release={state.release} route={route} mode="briefs"/> : null}
             {current === "how" ? <><DecisionIntelligence key="methods" release={state.release} route={route} mode="methods"/><SourceAtlas release={state.release}/></> : null}
             {current === "countries" && !route.id ? (
@@ -167,20 +168,17 @@ export function App() {
           <p>
             <strong>Global Food System Observatory.</strong> A research project
             at the University of Guelph. Not an official warning system, and
-            nothing here is a forecast.
+            the scenarios are not forecasts.
           </p>
           <p>
-            Built on figures published by the Food and Agriculture Organization
-            of the United Nations and the World Bank, used under Creative
-            Commons Attribution 4.0. Neither organisation is responsible for
-            anything on this site.
+            Uses published figures from FAO, the World Bank and other providers. Each source has its own licence and limitations. Providers are not responsible for conclusions on this site.
           </p>
           <p>
-            <a href={href("how")}>How this works</a> ·{" "}
+            <a href={href("how")}>Sources and methods</a> ·{" "}
             <a href="https://github.com/bdzion/global-food-system-observatory">
               Code and data
             </a>{" "}
-            · <a href="mailto:mbodrudd@uoguelph.ca">Tell us we are wrong</a>
+            · <a href="mailto:mbodrudd@uoguelph.ca">Report an error or send feedback</a>
           </p>
         </div>
       </footer>

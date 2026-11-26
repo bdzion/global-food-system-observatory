@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { IndicatorGuide } from "../components/ReaderGuide";
 import { CompoundLab } from "../components/CompoundLab";
 import { WorldEvidenceMap, RankedBars, PriceTrend, CountryTrends, SupplierNetwork, ExposurePlot } from "../components/EvidenceVisuals";
 import { loadCommodities, shipmentScenario, priceAge, type CommodityRelease, type CommodityProfile } from "../lib/commodities";
@@ -102,7 +103,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
           late: flow ? shipmentScenario(flow.quantity_t, stop, months, replacement, delay, capacity) : null };
       }) : [];
   const imports = [...countries].filter(c => c.imports_t != null).sort((a,b) => b.imports_t! - a.imports_t!);
-  const title = {overview:"A connected global food system",explore:"Explore global food-system evidence",stress:"What if shipments stopped?"}[mode];
+  const title = {overview:"A connected global food system",explore:"The indicators",stress:"Possible timelines"}[mode];
   const groupOf = (id:string) => products[id].group || (id === "soybeans" ? "oils" : "staples");
   const groups = [["all","All products"],["staples","Staple crops"],["oils","Oilseeds & edible oils"],["pulses","Pulses"],["animal","Animal-source foods"],["fresh","Fresh foods"]];
   const visibleProducts = Object.entries(products).filter(([id])=>group==="all"||groupOf(id)===group);
@@ -111,22 +112,23 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
     <div className="commodity-intro">
       <p className="commodity-kicker">A research project · not an official warning system</p>
       <h1>{title}</h1>
-      <p className="lede">Track production, markets, trade and resilience buffers across interconnected foods. Annual figures describe structural exposure, not current shortages. New evidence domains are added only when source and validation requirements are met.</p>
+      <p className="lede">{mode==="stress"?"Choose a country, a food and a supplier. Explore what might happen if shipments were interrupted, and compare acting now with acting later. These are scenarios, not forecasts.":"Find out how food is produced and traded, where countries depend on imports and what may help them cope with a disruption. Annual figures describe existing dependencies, not today’s shortages."}</p>
     </div>
-    <div className="commodity-filter" aria-label="Choose a crop and a country">
-      <label>Commodity<select aria-label="Commodity" value={key} onChange={e => select(e.target.value, geo)}>{Object.entries(products).map(([id,p]) => <option key={id} value={id}>{p.name}</option>)}</select></label>
+    {mode==="explore"&&<IndicatorGuide/>}
+    <div className="commodity-filter" aria-label="Choose a food and a country">
+      <label>Food product<select aria-label="Commodity" value={key} onChange={e => select(e.target.value, geo)}>{Object.entries(products).map(([id,p]) => <option key={id} value={id}>{p.name}</option>)}</select></label>
       <label>Country<select aria-label="Country" value={geo} onChange={e => select(key, e.target.value)}><option value="global">Global</option>{choices.map(([id,n]) => <option key={id} value={id}>{n}</option>)}</select></label>
       <p className="figure-note" role="status">{product.name} · {geo === "global" ? "Global" : allCountries.get(geo)} · figures for {product.year ?? "an unknown year"}</p>
     </div>
     {(mode === "overview" || mode === "explore") && <WorldEvidenceMap product={product} selected={geo} onSelect={id=>select(key,id)}/>}
     {(mode === "overview" || mode === "explore") && <>
-      <h2>What we cover</h2>
-      <p className="figure-note">This validated data release contains {publishedCount} product forms with country records. Website features and data releases update separately; additional registered commodities appear here only after successful data validation.</p>
+      <h2>Foods covered</h2>
+      <p className="figure-note">We have country figures for {publishedCount} food products. Select a group or food to explore it.</p>
       <div className="product-groups" aria-label="Filter product catalogue">{groups.map(([id,label])=><button key={id} className="visual-button" aria-pressed={group===id} onClick={()=>setGroup(id)}>{label}</button>)}</div>
       {visibleProducts.length===0&&<p role="status">No validated data for this group in this release. This is a coverage gap, not an indication that the group has no production or trade. See Data &amp; Methods for planned sources.</p>}
       <div className="commodity-grid">{visibleProducts.map(([id,p]) => <article className="commodity-panel" key={id}>
         <h3>{p.name}</h3><p>{p.role}</p><p><strong>{Object.keys(p.countries).length}</strong> country records · {p.year ?? "no year"}</p>
-        <p>{p.price ? <>{p.price.plain_name}: {number(p.price.latest_value, 1)} {p.price.unit} ({monthWords(p.price.latest_period)} · {priceAge(p.price.latest_period)})</> : "No benchmark price connected for this product"}</p>
+        <p>{p.price ? <>{p.price.plain_name}: {number(p.price.latest_value, 1)} {p.price.unit} ({monthWords(p.price.latest_period)} · {priceAge(p.price.latest_period)})</> : "No international reference price available"}</p>
         <a href={href("commodities", undefined, {commodity:id, geo})}>Explore {p.name.toLowerCase()}</a>
       </article>)}</div>
       <h2>Shared pressures: energy and fertilizer</h2><div className="commodity-grid">{Object.values(release.world.prices).filter(p => ["urea_price","dap_price","potash_price","oil_price","gas_price"].includes(p.id)).map(p => <article className="commodity-panel" key={p.id}><h3>{p.plain_name}</h3><strong>{number(p.latest_value,1)} {p.unit}</strong><p>{monthWords(p.latest_period)} · {percent(p.change_over_year_pct)} different from a year earlier</p></article>)}</div>
@@ -138,8 +140,8 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
       <h2>{product.name}: {geo === "global" ? "reported trade" : allCountries.get(geo)}</h2>
       <p>{product.role}. Figures are for this exact product only — milled rice is never added to paddy, and soybeans are never added to soybean oil, because they are not the same thing. (FAOSTAT item {product.item_code}.)</p>
       {geo === "global" ? <><div className="visual-grid"><RankedBars title="Largest reported exporters" unit="t" rows={product.exporters.slice(0,8).map(c=>({id:c.iso3,name:c.name,value:c.exports_t}))} onSelect={id=>select(key,id)}/><RankedBars title="Largest reported importers" unit="t" rows={imports.slice(0,8).map(c=>({id:c.iso3,name:c.name,value:c.imports_t!}))} onSelect={id=>select(key,id)}/></div><div className="commodity-grid">
-        <article className="commodity-panel"><h3>Biggest sellers</h3>{product.exporters.length ? <ol>{product.exporters.map(c => <li key={c.iso3}><a href={href("commodities",undefined,{commodity:key,geo:c.iso3})}>{c.name}</a> — {t(c.exports_t)}</li>)}</ol> : <p>Not available.</p>}</article>
-        <article className="commodity-panel"><h3>Biggest buyers</h3>{imports.length ? <ol>{imports.slice(0,12).map(c => <li key={c.iso3}><a href={href("commodities",undefined,{commodity:key,geo:c.iso3})}>{c.name}</a> — {t(c.imports_t)}</li>)}</ol> : <p>Not available.</p>}</article>
+        <article className="commodity-panel"><h3>Largest exporters</h3>{product.exporters.length ? <ol>{product.exporters.map(c => <li key={c.iso3}><a href={href("commodities",undefined,{commodity:key,geo:c.iso3})}>{c.name}</a> — {t(c.exports_t)}</li>)}</ol> : <p>Not available.</p>}</article>
+        <article className="commodity-panel"><h3>Largest importers</h3>{imports.length ? <ol>{imports.slice(0,12).map(c => <li key={c.iso3}><a href={href("commodities",undefined,{commodity:key,geo:c.iso3})}>{c.name}</a> — {t(c.imports_t)}</li>)}</ol> : <p>Not available.</p>}</article>
       </div></> : profile ? <>
         <div className="commodity-grid">{[
           ["Grew",t(profile.production_t),profile.flags.production],
@@ -151,9 +153,9 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
         ].map(([label,value,note]) => <article className="commodity-panel" key={label}><h3>{label}</h3><strong className="commodity-value">{value}</strong><p className="figure-note">{sourceWords(note as string | undefined)}</p></article>)}</div>
         {profile.stock_note ? <p className="notice"><strong>Why there is no stock figure here. </strong>{profile.stock_note}</p> : null}
         <p className="figure-note">We never rank countries on the stock figures, and we do not treat them as grain a government could release tomorrow.</p>
-        <h3>Who it buys from</h3>
+        <h3>Where imports come from</h3>
         <p>{profile.supplier_basis === "importer_reported" ? "This country reports its own purchases, so this is its own account of who it buys from." : profile.supplier_basis === "exporter_mirrored" ? "This country does not report its own purchases. The list below is pieced together from what other countries said they sold it, so it covers only the sellers who do report." : "Neither this country nor its suppliers report this trade in a form we can use."} {profile.supplier_year&&profile.supplier_year!==profile.year? "Supplier evidence is from "+profile.supplier_year+"; supply balance is from "+profile.year+". No cross-year coverage ratio is calculated.":profile.supplier_coverage_pct!=null?"Observed flows account for "+percent(profile.supplier_coverage_pct)+" of recorded imports.":"Comparable supplier coverage is unavailable."}</p>
-        {profile.suppliers.length ? <div className="commodity-table"><table><caption>Observed supplier flows · {profile.supplier_year??profile.year}</caption><thead><tr><th>Supplier</th><th>Tonnes</th><th>Share</th><th>Where the figure comes from</th></tr></thead><tbody>{profile.suppliers.slice(0,15).map(s => <tr key={s.iso3}><th scope="row">{s.name}</th><td>{number(s.quantity_t)}</td><td>{percent(s.share_pct)}</td><td>{sourceWords(s.flag)}</td></tr>)}</tbody></table></div> : <p>No bilateral flow evidence.</p>}
+        {profile.suppliers.length ? <div className="commodity-table"><table><caption>Observed supplier flows · {profile.supplier_year??profile.year}</caption><thead><tr><th>Supplier</th><th>Tonnes</th><th>Share</th><th>Where the figure comes from</th></tr></thead><tbody>{profile.suppliers.slice(0,15).map(s => <tr key={s.iso3}><th scope="row">{s.name}</th><td>{number(s.quantity_t)}</td><td>{percent(s.share_pct)}</td><td>{sourceWords(s.flag)}</td></tr>)}</tbody></table></div> : <p>No supplier-by-supplier trade figures available.</p>}
         <RankedBars title="Largest observed suppliers — share of reported bilateral flows" unit="%" rows={profile.suppliers.slice(0,8).map(s=>({id:s.iso3,name:s.name,value:s.share_pct}))}/>
         <SupplierNetwork profile={profile}/>
         <CountryTrends profile={profile}/>
@@ -178,13 +180,13 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
         {scenarioRows.map(s=>s.early&&s.late?<RankedBars key={s.id} title={s.name+" — remaining shipment gap"} unit="t" rows={[{id:"none",name:"No action",value:s.early.gross},{id:"early",name:"Early action",value:s.early.residual},{id:"late",name:"Delayed action",value:s.late.residual}]}/>:null)}
         <p className="figure-note">Early action assumes replacement begins immediately; delayed action starts after the selected lead time. Replacement is capped by the assumed alternative supplier capacity and available time; competing buyers and seasonal availability are not modelled. No aggregation or substitution across products is inferred.</p>
         <CompoundLab key={key+":"+geo+":"+actualSupplier.iso3} profile={profile} supplier={actualSupplier}/>
-        <h3>Decision options and constraints</h3><div className="commodity-grid"><article className="commodity-panel"><strong>Importers</strong><p>Check alternative suppliers' exportable surplus, financing and transit time before purchasing.</p></article><article className="commodity-panel"><strong>Government</strong><p>Independently verify accessible reserves and assess targeted affordability support. Consider displacement of other buyers.</p></article></div>
+        <h3>What officials and importers should check</h3><div className="commodity-grid"><article className="commodity-panel"><strong>Importers</strong><p>Check alternative suppliers' exportable surplus, financing and transit time before purchasing.</p></article><article className="commodity-panel"><strong>Government</strong><p>Independently verify accessible reserves and assess targeted affordability support. Consider displacement of other buyers.</p></article></div>
       </>}
       <p><a href={href("what-if")}>The wheat what-if test, which also names who else would be bidding</a></p>
     </>}
     
-    {geo!=="global"&&mode==="explore"&&<p><a href={href("watch",undefined,{commodity:key,geo})}>Country context and relevant signals →</a> · <a href={href("briefs",undefined,{commodity:key,geo})}>Decision brief →</a></p>}
+    {geo!=="global"&&mode==="explore"&&<p><a href={href("watch",undefined,{commodity:key,geo})}>Next: The threats →</a> · <a href={href("briefs",undefined,{commodity:key,geo})}>Country brief →</a></p>}
     <details className="commodity-panel"><summary>Evidence and methods</summary><dl>{Object.entries(method).map(([id,value])=><div key={id}><dt><strong>{id.replaceAll("_"," ")}</strong></dt><dd>{value}</dd></div>)}</dl><ul>{Object.entries(sources).map(([id,url])=><li key={id}><a href={url}>{id}</a>{Object.hasOwn(provider_updated,id) ? " · provider update "+(provider_updated[id] || "unknown") : ""}</li>)}</ul><p>Release {release.manifest.release_id}. Data dates differ by source. <a href={href("how")}>Data and methods</a></p></details>
-    {mode !== "stress" && <p><a href={href("commodities","what-if",{commodity:key,geo})}>See what an interruption would mean →</a></p>}
+    {mode !== "stress" && <p><a href={href("commodities","what-if",{commodity:key,geo})}>Next: Possible timelines →</a></p>}
   </section>;
 }
