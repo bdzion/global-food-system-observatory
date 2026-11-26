@@ -138,5 +138,42 @@ def geoglam():
     except (core.SourceError,ValueError,TypeError,AttributeError):
         return {**base,"status":"unavailable","layers":[]}
 
+GDACS_API="https://www.gdacs.org/gdacsapi/api/events/geteventlist/EVENTS4APP"
+GDACS_DOC="https://www.gdacs.org/"
+def parse_hazards(payload):
+    if not isinstance(payload,dict) or not isinstance(payload.get("features"),list):
+        raise ValueError("Unexpected GDACS schema")
+    events={}
+    for feat in payload["features"]:
+        prop=feat.get("properties") or {}
+        typ=str(prop.get("eventtype","")).upper()
+        eid=str(prop.get("eventid",""))
+        if typ not in ("EQ","TC","FL","VO","WF","DR","TS") or not eid.isdigit():continue
+        # Never infer that an earthquake, flood, or other hazard hit cropland.
+        key=typ+":"+eid
+        def date(v):
+            value=str(v or "")
+            return value[:19] if re.match(r"^\d{4}-\d{2}-\d{2}",value) else None
+        iso=list(dict.fromkeys(re.findall(r"\b[A-Z]{3}\b",str(prop.get("iso3") or "").upper())))
+        level=str(prop.get("alertlevel") or "").lower()
+        row={"id":key,"event_type":typ,"provider_alert_level":level if level in ("green","orange","red") else "unknown",
+             "country":str(prop.get("country") or "Unknown"),"iso3":iso,
+             "start":date(prop.get("fromdate")),"end":date(prop.get("todate")),
+             "modified":date(prop.get("datemodified")),"url":GDACS_DOC+"resources.aspx?eventid="+eid+"&eventtype="+typ}
+        previous=events.get(key)
+        if previous is None or (row["modified"] or row["end"] or "")>(previous["modified"] or previous["end"] or ""):
+            events[key]=row
+    return sorted(events.values(),key=lambda r:r["modified"] or r["end"] or r["start"] or "",reverse=True)[:100]
+
+def gdacs():
+    base={"name":"Global Disaster Awareness and Coordination System","url":GDACS_DOC,"source":"GDACS / European Union",
+          "licence":"CC BY 4.0; credit GDACS","licence_url":"https://www.gdacs.org/Documents/2025/GDACS_Terms_of_use_Oct_25.pdf",
+          "limitation":"Recent provider hazard notifications, not confirmed agricultural damage or an exhaustive disaster inventory. Alert level belongs to GDACS, not GFSO. Confirm with local authorities before decisions."}
+    try:
+        raw=core.fetch_json(GDACS_API,timeout=30,attempts=1)
+        return {**base,"status":"available","events":parse_hazards(raw),"retrieved_at":core.iso(core.utc_now())}
+    except (core.SourceError,ValueError,TypeError,AttributeError):
+        return {**base,"status":"unavailable","events":[]}
+
 def gather(cache=None):
-    return {"schema_version":SCHEMA_VERSION,"fpi":fpi(),"psd":psd(cache),"geoglam":geoglam()}
+    return {"schema_version":SCHEMA_VERSION,"fpi":fpi(),"psd":psd(cache),"geoglam":geoglam(),"gdacs":gdacs()}
