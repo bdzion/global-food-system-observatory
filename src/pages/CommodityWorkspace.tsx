@@ -6,7 +6,7 @@ import { monthWords, tonnes } from "../lib/format";
 import type { Release } from "../lib/types";
 
 type Mode = "overview" | "explore" | "stress";
-type Result = { kind: "loading" } | { kind: "legacy" } | { kind: "error"; message: string } | { kind: "ready"; data: CommodityRelease };
+type Result = { kind: "loading" } | { kind: "legacy" } | { kind: "error"; message: string } | { kind: "ready"; data: CommodityRelease; selection:string; compound:boolean };
 const STORE = "gfso.commodity-context.v1";
 const readPreference = (key: string, fallback: string) => {
   try { return JSON.parse(localStorage.getItem(STORE) || "{}")[key] || fallback; }
@@ -49,7 +49,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
     let cancelled = false;
     setResult({kind:"loading"});
     loadCommodities(release.manifest,selected,mode==="stress"&&compound).then(data => {
-      if (!cancelled) setResult(data ? { kind: "ready", data } : { kind: "legacy" });
+      if (!cancelled) setResult(data ? { kind: "ready", data, selection:selected, compound } : { kind: "legacy" });
     }).catch((error: unknown) => {
       if (!cancelled) setResult({ kind: "error", message: String(error) });
     });
@@ -73,11 +73,13 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
     const query = new URLSearchParams(route.query);
     query.set("commodity", product); query.set("geo", geography);
     window.history.replaceState(null, "", href(route.page, route.id, Object.fromEntries(query)));
+    window.dispatchEvent(new Event("gfso-context"));
   }
 
   if (result.kind === "loading") return <p role="status">Loading commodity evidence…</p>;
   if (result.kind === "legacy") return <section className="commodity-panel"><h2>These figures have not been published yet</h2><p>This release covers wheat only. Nothing is shown for the other crops, because we would be making it up.</p><a href={href("wheat")}>Open original wheat evidence</a></section>;
   if (result.kind === "error") return <section className="commodity-panel"><h2>The crop figures could not be loaded</h2><p role="alert">Nothing is being shown rather than a page that looks empty. Reason given: {result.message}</p><a href={href("home")}>Go to the front page</a></section>;
+  if(result.selection!==selected||result.compound!==compound)return <p role="status">Loading selected commodity evidence…</p>;
   const { products, sources, provider_updated, method } = result.data;
   const key = Object.hasOwn(products, selected) ? selected : "wheat";
   const product = products[key];
@@ -116,7 +118,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
       <p className="figure-note" role="status">{product.name} · {geo === "global" ? "Global" : allCountries.get(geo)} · figures for {product.year ?? "an unknown year"}</p>
     </div>
     {(mode === "overview" || mode === "explore") && <WorldEvidenceMap product={product} selected={geo} onSelect={id=>select(key,id)}/>}
-    {mode === "overview" && <>
+    {(mode === "overview" || mode === "explore") && <>
       <h2>What we cover</h2>
       <p className="figure-note">This validated data release contains {publishedCount} product forms with country records. Website features and data releases update separately; additional registered commodities appear here only after successful data validation.</p>
       <div className="product-groups" aria-label="Filter product catalogue">{groups.map(([id,label])=><button key={id} className="visual-button" aria-pressed={group===id} onClick={()=>setGroup(id)}>{label}</button>)}</div>

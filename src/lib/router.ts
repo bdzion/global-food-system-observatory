@@ -34,8 +34,10 @@ export function useRoute(): Route {
       // halfway down a long page lands the reader halfway down the next one.
       window.scrollTo(0, 0);
     };
+    const context = () => setRoute(parse(window.location.hash));
     window.addEventListener("hashchange", update);
-    return () => window.removeEventListener("hashchange", update);
+    window.addEventListener("gfso-context", context);
+    return () => { window.removeEventListener("hashchange", update); window.removeEventListener("gfso-context",context); };
   }, []);
   return route;
 }
