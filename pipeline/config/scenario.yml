@@ -1,0 +1,127 @@
+# The what-if test, and the assumptions it rests on.
+#
+# This is the part of the site that is not an observation. Everything here is
+# arithmetic on stated assumptions, and the site says so on every screen it
+# appears on. It is a way of asking "if this happened, who would feel it, and
+# how much room would they have" — not a forecast that it will happen.
+#
+# Each assumption names the published figure that would contradict it and the
+# number at which we would call it contradicted. When a release crosses one,
+# the site marks the assumption broken, records the date and the reading that
+# broke it, and says the test needs looking at again. Nothing is recalculated
+# quietly in the background.
+
+scenario:
+  id: exporter-interruption
+  title: One of the big wheat sellers cannot ship for a while
+  plain_question: >-
+    If a country that supplies a lot of the world's wheat stopped shipping for
+    part of a year, which buyers would have the most to replace, and how much
+    room would they have to do it?
+  what_this_is: >-
+    Arithmetic on assumptions you can change, using real trade and stock
+    figures. It is not a forecast, and it does not say this will happen.
+  what_this_is_not: >-
+    It does not predict prices, hunger or shortages. It works out how much
+    wheat a country would have to find somewhere else, and shows what it has
+    to fall back on. What would actually happen depends on decisions nobody
+    has made yet.
+
+  # The three numbers a reader can move. Defaults are deliberately round, and
+  # labelled as a starting point rather than an estimate of anything.
+  inputs:
+    - id: interruption
+      label: How much of that supplier's shipments stop
+      unit: per cent
+      default: 30
+      min: 0
+      max: 100
+      step: 5
+      note: A round starting number, not an estimate of any real event.
+    - id: months
+      label: For how long
+      unit: months
+      default: 6
+      min: 1
+      max: 12
+      step: 1
+    - id: replaceable
+      label: How much of the gap can be bought elsewhere
+      unit: per cent
+      default: 40
+      min: 0
+      max: 100
+      step: 5
+      note: >-
+        Depends on whether other sellers have spare wheat, whether the buyer
+        can pay for it, and whether it can be shipped in time. Treat this as
+        the question the test is really asking.
+
+assumptions:
+  - id: prices-not-already-climbing
+    plain: World wheat prices are not already climbing unusually fast.
+    why_it_matters: >-
+      The test assumes a buyer starts from an ordinary market. If prices are
+      already moving, the cost of replacing supply is higher than the test
+      shows, and competition for the same alternative wheat is stronger.
+    watch:
+      indicator: wheat_price
+      condition: growth_anomaly_above
+      value: 1.0
+    if_broken: >-
+      Replacing supply would cost more than this test assumes, and more buyers
+      would be trying to do it at the same time.
+
+  - id: no-second-shock-in-inputs
+    plain: Fertilizer costs are not adding a second shock at the same time.
+    why_it_matters: >-
+      A trade interruption that lands while fertilizer is also expensive hits
+      two harvests, not one: this year's supply and next year's planting.
+    watch:
+      indicator: urea_price
+      condition: growth_anomaly_above
+      value: 1.0
+    if_broken: >-
+      The test covers one season. A fertilizer shock extends the problem into
+      the following season, which this test does not model.
+
+  - id: another-supplier-available
+    plain: The buyer could turn to another supplier.
+    why_it_matters: >-
+      "How much can be bought elsewhere" assumes somewhere else exists. A
+      country that buys most of its wheat from one place has fewer doors to
+      knock on, whatever the slider says.
+    watch:
+      indicator: top_supplier_share
+      condition: above
+      value: 50.0
+      per_country: true
+    if_broken: >-
+      For this country, most wheat already comes from one supplier. Treat the
+      replacement figure as optimistic.
+
+  - id: households-have-room
+    plain: Households are not already absorbing a rising food bill.
+    why_it_matters: >-
+      The same price rise lands differently depending on how much room people
+      already have. Where food is already taking more of a wage, there is less
+      to give.
+    watch:
+      indicator: food_price_gap
+      condition: above
+      value: 5.0
+      per_country: true
+    if_broken: >-
+      Food prices in this country are already rising faster than prices in
+      general. A further rise would land on people with less room to absorb it.
+
+# Who else leans on the same supplier. Every time the test suggests a buyer
+# look elsewhere, it also names the other countries that depend on where it
+# would be looking, because advice to one buyer is competition for another.
+displacement:
+  explain: >-
+    If this country goes looking for wheat from another seller, it will be
+    bidding against whoever else buys from that seller. The countries below
+    depend on the same supplier. The ones with thin stocks and little room in
+    the household budget are the ones a bidding contest would hurt most.
+  show_top: 6

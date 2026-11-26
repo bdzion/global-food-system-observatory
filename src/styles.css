@@ -1,0 +1,407 @@
+/* Design notes, so the next person does not have to guess.
+ *
+ * The palette is deliberately quiet. Colour here carries meaning and nothing
+ * else: amber means something we watch has moved, grey means we do not know,
+ * and grey never means zero. Nothing is red, because red reads as emergency
+ * and this site does not have the evidence to declare one.
+ *
+ * Every state is also carried by a word, not only by a colour, so the page
+ * works for a reader who cannot distinguish the two and for one printing it
+ * in black and white.
+ *
+ * Type is 17px because the audience reads this on a work laptop next to other
+ * windows, and because the content is prose rather than a dashboard. */
+
+:root {
+  --ink: #1c2430;
+  --ink-soft: #4a5768;
+  --ink-faint: #5c6776; /* 5.0:1 or better on every background it sits on */
+  --paper: #fbfaf7;
+  --card: #ffffff;
+  --line: #dcd9d2;
+  --line-soft: #ebe8e2;
+  --accent: #1f6f78;
+  --accent-soft: #e8f2f2;
+  --attention: #9a6212;
+  --attention-soft: #fdf3e3;
+  --unknown: #8a8a8a;
+  --unknown-soft: #f0efed;
+  --focus: #1f6f78;
+
+  --measure: 68ch;
+  --radius: 10px;
+  --gap: 1.25rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e9e7e2;
+    --ink-soft: #b6bcc6;
+    --ink-faint: #949ca8;
+    --paper: #14181d;
+    --card: #1b2026;
+    --line: #333a43;
+    --line-soft: #262c33;
+    --accent: #6fc0c6;
+    --accent-soft: #15302f;
+    --attention: #e0a94e;
+    --attention-soft: #33281a;
+    --unknown: #9aa0a8;
+    --unknown-soft: #23272c;
+    --focus: #6fc0c6;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.6;
+  font-variant-numeric: tabular-nums;
+}
+
+h1, h2, h3, h4 { line-height: 1.25; margin: 0 0 0.5em; font-weight: 650; }
+h1 { font-size: 1.9rem; letter-spacing: -0.01em; }
+h2 { font-size: 1.4rem; margin-top: 2.2rem; }
+h3 { font-size: 1.12rem; margin-top: 1.6rem; }
+p { margin: 0 0 1em; max-width: var(--measure); }
+ul, ol { max-width: var(--measure); }
+
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+
+:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* ---------------------------------------------------------------- layout */
+
+.skip {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  background: var(--card);
+  color: var(--ink);
+  padding: 0.75rem 1rem;
+  z-index: 50;
+  border: 2px solid var(--accent);
+  border-radius: 0 0 var(--radius) 0;
+}
+.skip:focus { left: 0; }
+
+.masthead {
+  border-bottom: 1px solid var(--line);
+  background: var(--card);
+}
+.masthead-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0.9rem 1.25rem;
+}
+.wordmark {
+  display: block;
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--ink);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+}
+.wordmark span { display: block; font-weight: 400; font-size: 0.82rem; color: var(--ink-faint); }
+
+nav.main { margin-top: 0.75rem; }
+nav.main ul {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.2rem;
+  margin: 0;
+  padding: 0;
+  max-width: none;
+}
+nav.main a {
+  display: inline-block;
+  padding: 0.3rem 0;
+  color: var(--ink-soft);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  font-size: 0.97rem;
+}
+nav.main a:hover { color: var(--ink); border-bottom-color: var(--line); }
+nav.main a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
+
+main { max-width: 1100px; margin: 0 auto; padding: 1.75rem 1.25rem 4rem; }
+
+footer {
+  border-top: 1px solid var(--line);
+  margin-top: 3rem;
+  background: var(--card);
+}
+footer .inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem 2.5rem;
+  color: var(--ink-faint);
+  font-size: 0.9rem;
+}
+footer p { max-width: var(--measure); }
+
+/* ---------------------------------------------------------------- blocks */
+
+.lede { font-size: 1.12rem; color: var(--ink-soft); max-width: var(--measure); }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.2rem;
+}
+
+.grid { display: grid; gap: var(--gap); }
+.grid.cols-2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
+.grid.cols-3 { grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+.grid.cols-4 { grid-template-columns: repeat(auto-fit, minmax(215px, 1fr)); }
+
+.figure-value {
+  font-size: 1.55rem;
+  font-weight: 650;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+.figure-label { font-size: 0.92rem; color: var(--ink-soft); }
+.figure-note { font-size: 0.84rem; color: var(--ink-faint); margin-top: 0.4rem; }
+
+/* State is always a word as well as a colour. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.18rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.tag-quiet { background: var(--unknown-soft); border-color: var(--line); color: var(--ink-soft); }
+.tag-watching { background: var(--attention-soft); border-color: var(--attention); color: var(--attention); }
+.tag-not_watched,
+.tag-no_data { background: var(--unknown-soft); border-color: var(--line); color: var(--ink-faint); font-style: italic; }
+.tag-accent { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+
+.rule { border: 0; border-top: 1px solid var(--line-soft); margin: 2.25rem 0; }
+
+/* ---------------------------------------------------------------- plain-words panel */
+
+details.explain {
+  border-left: 3px solid var(--line);
+  padding-left: 0.9rem;
+  margin: 0.75rem 0 1.25rem;
+  max-width: var(--measure);
+}
+details.explain > summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 0.93rem;
+  font-weight: 600;
+  padding: 0.15rem 0;
+}
+details.explain > summary::marker { color: var(--accent); }
+details.explain p { font-size: 0.95rem; color: var(--ink-soft); margin-top: 0.6rem; }
+details.explain[open] { border-left-color: var(--accent); }
+
+/* ---------------------------------------------------------------- tables */
+
+/* A wide table scrolls inside its own box rather than pushing the whole page
+   sideways. The caption is positioned relative to the table, so without a width
+   of its own it stretches the scroll container and takes the page with it. */
+/* A wide table scrolls inside its own box. `contain: paint` is what stops the
+   table's intrinsic width leaking out and giving the whole page a sideways
+   scroll on a phone — `overflow-x: auto` alone does not, which is easy to miss
+   because the table itself looks correct either way. */
+.table-wrap {
+  overflow-x: auto;
+  max-width: 100%;
+  contain: paint;
+  margin: 0.75rem 0 0.25rem;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.95rem;
+  min-width: 480px;
+}
+caption {
+  text-align: left;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  padding-bottom: 0.5rem;
+  max-width: var(--measure);
+}
+th, td {
+  text-align: left;
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+th { font-weight: 650; color: var(--ink-soft); font-size: 0.88rem; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+tbody tr:hover { background: var(--unknown-soft); }
+.missing { color: var(--ink-faint); }
+
+/* ---------------------------------------------------------------- controls */
+
+button, .button {
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.45rem 0.9rem;
+  border-radius: 7px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  cursor: pointer;
+}
+button:hover { border-color: var(--accent); }
+button[aria-pressed="true"] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.toggle-row { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: center; margin: 0.75rem 0; }
+
+label.field { display: block; margin-bottom: 1.1rem; max-width: 34rem; }
+label.field > .field-label { display: block; font-weight: 600; margin-bottom: 0.15rem; }
+label.field > .field-note { display: block; font-size: 0.88rem; color: var(--ink-faint); margin-bottom: 0.4rem; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.field-value { font-weight: 650; color: var(--accent); }
+
+select, input[type="search"] {
+  font: inherit;
+  font-size: 0.95rem;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--ink);
+  max-width: 100%;
+}
+
+/* ---------------------------------------------------------------- charts */
+
+.chart { width: 100%; height: auto; display: block; }
+.chart-line { fill: none; stroke: var(--accent); stroke-width: 2; }
+.chart-axis { stroke: var(--line); stroke-width: 1; }
+.chart-grid { stroke: var(--line-soft); stroke-width: 1; }
+.chart-text { fill: var(--ink-faint); font-size: 11px; }
+.bar { fill: var(--accent); }
+.bar-muted { fill: var(--unknown); }
+
+/* ---------------------------------------------------------------- chain */
+
+.chain { list-style: none; padding: 0; margin: 1rem 0 0; max-width: none; }
+.chain > li {
+  display: grid;
+  grid-template-columns: 2.2rem 1fr;
+  gap: 0 0.9rem;
+  padding: 0 0 1.4rem;
+  position: relative;
+}
+.chain > li:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 1.07rem;
+  top: 1.9rem;
+  bottom: 0;
+  width: 2px;
+  background: var(--line);
+}
+.chain-step {
+  width: 2.2rem;
+  height: 2.2rem;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  background: var(--card);
+  display: grid;
+  place-items: center;
+  font-weight: 650;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  position: relative;
+  z-index: 1;
+}
+.chain-step.on { border-color: var(--attention); color: var(--attention); background: var(--attention-soft); }
+.chain-step.off { border-style: dashed; color: var(--ink-faint); }
+.chain-body h3 { margin: 0.15rem 0 0.3rem; font-size: 1.04rem; }
+.chain-body p { margin: 0.3rem 0; font-size: 0.95rem; }
+.chain-finding {
+  margin: 0.5rem 0 0;
+  padding: 0.55rem 0.75rem;
+  border-radius: 7px;
+  background: var(--unknown-soft);
+  font-size: 0.92rem;
+}
+.chain-finding.fired { background: var(--attention-soft); }
+
+/* ---------------------------------------------------------------- misc */
+
+.pill-list { display: flex; flex-wrap: wrap; gap: 0.4rem; padding: 0; margin: 0.6rem 0; list-style: none; max-width: none; }
+.pill-list a {
+  display: inline-block;
+  padding: 0.25rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  background: var(--card);
+}
+.pill-list a:hover { border-color: var(--accent); color: var(--accent); }
+
+.notice {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--attention);
+  background: var(--attention-soft);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  margin: 1.25rem 0;
+  max-width: var(--measure);
+  font-size: 0.95rem;
+}
+.notice.plain { border-left-color: var(--accent); background: var(--accent-soft); }
+.notice p:last-child { margin-bottom: 0; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+@media (max-width: 560px) {
+  body { font-size: 16px; }
+  h1 { font-size: 1.55rem; }
+  main { padding: 1.25rem 1rem 3rem; }
+}
+
+@media print {
+  nav.main, .toggle-row, .skip { display: none; }
+  body { background: #fff; color: #000; }
+  .card { border: 1px solid #999; }
+}

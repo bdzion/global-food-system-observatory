@@ -1,0 +1,144 @@
+# How a wheat shock travels, and what would show it.
+#
+# The seven stages below are the links in the chain between a field somewhere
+# and a meal somewhere else. A stage says HOW FAR ALONG THE CHAIN THE EVIDENCE
+# HAS REACHED. It does not say how bad things are. Those are different
+# questions, and running them together is the commonest way a monitoring site
+# misleads people.
+#
+# The design follows the European Drought Observatory, which classifies a place
+# by which link of the drought chain its evidence has reached rather than by a
+# severity score, and keeps a memory of the previous period so that one episode
+# reads as one episode instead of flickering on and off.
+#
+# Two of the seven stages have no watch condition. That is not an oversight. No
+# open, current, global dataset covers them at a price a small team can carry,
+# so the site marks them "nothing is watching this" rather than "nothing is
+# happening here". The difference matters: the first is a gap in our coverage,
+# the second would be a claim about the world.
+
+stages:
+  - id: inputs
+    order: 1
+    label: The cost of growing next year's crop
+    what_it_means: >-
+      Fertilizer and energy prices. Wheat farmers buy these months before they
+      harvest anything, so a jump here shows up in the harvest a year later,
+      not this week.
+    watch:
+      - indicator: urea_price
+        condition: growth_anomaly_above
+        value: 1.0
+        why: Nitrogen fertilizer is rising faster than it usually rises.
+      - indicator: dap_price
+        condition: growth_anomaly_above
+        value: 1.0
+        why: Phosphate fertilizer is rising faster than it usually rises.
+      - indicator: gas_price
+        condition: growth_anomaly_above
+        value: 1.0
+        why: >-
+          Nitrogen fertilizer is made from natural gas, so a gas price spike
+          becomes a fertilizer price spike within a few months.
+
+  - id: growing
+    order: 2
+    label: How this year's crop is doing in the field
+    what_it_means: >-
+      Whether the weather and the growing conditions in the main wheat regions
+      are better or worse than usual.
+    watch: []
+    nothing_watching_because: >-
+      The crop condition assessments that would answer this are published by
+      GEOGLAM and FAO as expert reports rather than as data we can read
+      automatically. Connecting them is the first thing on the list to add.
+
+  - id: export_supply
+    order: 3
+    label: How much the big sellers have to sell
+    what_it_means: >-
+      Whether the countries that supply most of the world's traded wheat have
+      had an unusual year, and how much they were holding in store.
+    watch:
+      - indicator: exporter_production_change
+        condition: outside_usual_range
+        direction: lower
+        why: A main exporter grew less wheat than in any of the recent years we hold.
+      - indicator: exporter_stock_cover
+        condition: outside_usual_range
+        direction: lower
+        why: A main exporter went into the year with less in store than usual.
+
+  - id: transit
+    order: 4
+    label: Whether it can physically move
+    what_it_means: >-
+      Ports, shipping lanes and rail. Wheat that exists but cannot be moved is
+      not available to a buyer.
+    watch: []
+    nothing_watching_because: >-
+      Open shipping and port activity data exist, but connecting them properly
+      means establishing which vessels carry which commodity, and a port being
+      busy or quiet does not by itself tell you who is short of wheat. Claiming
+      otherwise would be guessing with a map on top.
+
+  - id: arrival
+    order: 5
+    label: What is actually arriving
+    what_it_means: >-
+      How much wheat a country took delivery of, and from whom.
+    watch:
+      - indicator: wheat_imports
+        condition: outside_usual_range
+        direction: lower
+        why: The country took in less wheat than in any recent year we hold.
+    clock_warning: >-
+      These figures are published once a year and arrive about a year late.
+      They describe the shape of a country's wheat supply, not this month.
+
+  - id: market
+    order: 6
+    label: What food costs in the shops
+    what_it_means: >-
+      Whether food prices in the country are rising faster than prices in
+      general. If they are, food is taking a bigger bite of the same wage.
+    watch:
+      - indicator: food_price_gap
+        condition: above
+        value: 5.0
+        why: >-
+          Food prices have risen at least 5 percentage points more than prices
+          in general over the past year.
+
+  - id: household
+    order: 7
+    label: Whether people can afford to eat well
+    what_it_means: >-
+      The share of people who could not afford a healthy diet even if the food
+      were on the shelf. This is where a supply problem becomes a human one.
+    watch:
+      - indicator: unaffordable_pct
+        condition: above
+        value: 30.0
+        why: >-
+          More than three in ten people in this country already cannot afford
+          a healthy diet, so there is little room to absorb a price rise.
+    clock_warning: >-
+      Published once a year and modelled from prices and incomes, not measured
+      by asking households. It shows the ground a price rise would land on.
+
+# What each state means on the website. These words appear on the page exactly
+# as they are written here.
+states:
+  quiet:
+    label: Nothing unusual
+    means: The things we watch at this stage are within their usual range.
+  watching:
+    label: Something has moved
+    means: At least one thing we watch at this stage is outside its usual range.
+  not_watched:
+    label: Nothing is watching this
+    means: We have no current open data for this stage. This is a gap in our coverage, not a finding about the world.
+  no_data:
+    label: Not enough history
+    means: We hold too few earlier years for this country to say what is usual.

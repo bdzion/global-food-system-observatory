@@ -1,0 +1,12 @@
+node_modules/
+dist/
+.cache/
+__pycache__/
+*.pyc
+.DS_Store
+.vite/
+
+# Data releases live on the `data` branch, never here. Keeping them off main
+# is what stops the repository growing by a release four times a day for as
+# long as the project runs. See docs/architecture.md, decision 2.
+public/data/

@@ -1,0 +1,136 @@
+# Refreshes the published statistics, builds a release, and deploys the site.
+#
+# Two jobs, on purpose. The first talks to the outside world and writes the
+# release to a separate `data` branch; the second builds the site from whatever
+# the newest good release is. Keeping them apart means a provider being slow,
+# or changing a file format, cannot take the website down — the previous
+# release stays published, visibly labelled with its age.
+#
+# Data releases live on the `data` branch and never on `main`, so the main
+# branch stays small enough to clone quickly however long the project runs.
+name: Refresh the figures and deploy
+
+on:
+  schedule:
+    # Four times a day, at an odd minute so this job is not queued behind
+    # everything else that runs on the hour. GitHub may start it late; the site
+    # always shows when a release was actually built, never when it was due.
+    - cron: "23 2,8,14,20 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**.md"]
+
+concurrency:
+  group: refresh-and-deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  refresh:
+    name: Build a release
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: write # only to push the release to the data branch
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out the data branch
+        run: |
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git clone --depth 3 --branch data \
+              "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data-branch
+          else
+            mkdir -p data-branch && cd data-branch && git init -b data
+            git remote add origin "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git"
+          fi
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pipeline/requirements.txt
+
+      # FAOSTAT's bulk archives are large and change once a year. Caching them
+      # keeps this job to a few minutes most days, and keeps us from asking FAO
+      # for 400 MB four times a day for a file that has not moved.
+      - name: Restore the downloads
+        uses: actions/cache@v4
+        with:
+          path: .cache
+          key: sources-${{ hashFiles('pipeline/config/sources.yml') }}-${{ github.run_id }}
+          restore-keys: |
+            sources-${{ hashFiles('pipeline/config/sources.yml') }}-
+            sources-
+
+      - name: Install
+        working-directory: pipeline
+        run: pip install -r requirements.txt
+
+      - name: Test before fetching anything
+        working-directory: pipeline
+        run: python -m pytest
+
+      - name: Build the release
+        working-directory: pipeline
+        env:
+          GFSO_CACHE: ${{ github.workspace }}/.cache
+        run: python -m gfso.run --out ../data-branch/data
+
+      - name: Save the release to the data branch
+        working-directory: data-branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing changed in this release."
+            exit 0
+          fi
+          git commit -q -m "Release $(python -c 'import json;print(json.load(open("data/manifest.json"))["release_id"])')"
+          git push origin HEAD:data
+
+  deploy:
+    name: Publish the site
+    needs: refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch the newest release
+        run: |
+          git clone --depth 1 --branch data \
+            "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" data-branch
+          rm -rf public/data
+          cp -r data-branch/data public/data
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+
+      # These check the published release against what the pages actually read,
+      # so a change in the pipeline cannot produce a green build and a blank
+      # panel on the site.
+      - name: Check the release against what the pages expect
+        run: npm test
+
+      - run: npm run build
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - id: deployment
+        uses: actions/deploy-pages@v4
