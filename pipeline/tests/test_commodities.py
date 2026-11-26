@@ -41,4 +41,101 @@ def test_importer_report_preferred():
     row = commodities.profile("AAA", 2023, b, t)
     assert row["supplier_basis"] == "importer_reported"
     assert row["suppliers"][0]["iso3"] == "BBB"
-    assert row["supplier_coverage_pct"] == 100 * 60 / 90
+    assert row["supplier_coverage_pct"] == round(100 * 60 / 90, 1)
+
+
+# --- added in review: the figures we decline to publish, and why ------------
+
+def _hist(iso, years, stocks, supply_t=24_000_000):
+    """A country with a long stock history and a large, steady supply."""
+    out = {}
+    for year, stock in zip(years, stocks):
+        out[f"{year}|{iso}"] = {
+            "production": supply_t / 2, "imports": supply_t / 2, "exports": 0.0,
+            "opening_stocks": stock, "flags": {},
+        }
+    return out
+
+
+def test_a_stock_series_that_collapses_to_nothing_is_not_published():
+    # Algeria's wheat runs 2.97 Mt, 2.60, 2.15, 1.49, then 58 tonnes. The silos
+    # did not empty; the accounting ran out of room. Publishing "no wheat in
+    # store" for a country that holds wheat is the error this guards against.
+    balance = _hist("AAA", [2020, 2021, 2022, 2023, 2024],
+                    [2_970_000, 2_600_000, 2_150_000, 1_490_000, 58])
+    trade = {"reported": {}, "mirrored": {}, "flags": {}}
+    row = commodities.profile("AAA", 2024, balance, trade)
+    assert row["estimated_cover_months"] is None
+    assert row["opening_stocks_t"] is None
+    assert row["stock_note"]  # whichever check caught it, it says why
+
+
+def test_a_collapse_is_caught_even_where_the_country_is_small():
+    # Isolates the history rule from the large-buyer rule. This country uses
+    # 60,000 t a year, so "under a week" does not apply, but its stocks still
+    # fall from a steady 20,000 t to 300 t in one step.
+    balance = _hist("AAA", [2021, 2022, 2023, 2024],
+                    [20_000, 19_000, 21_000, 300], supply_t=60_000)
+    trade = {"reported": {}, "mirrored": {}, "flags": {}}
+    row = commodities.profile("AAA", 2024, balance, trade)
+    assert row["estimated_cover_months"] is None
+    assert "balance" in row["stock_note"]
+
+
+def test_a_large_buyer_holding_under_a_week_is_not_published():
+    balance = _hist("AAA", [2022, 2023, 2024], [12_000, 12_000, 12_000])
+    trade = {"reported": {}, "mirrored": {}, "flags": {}}
+    row = commodities.profile("AAA", 2024, balance, trade)
+    assert row["estimated_cover_months"] is None
+    assert "placeholder" in row["stock_note"]
+
+
+def test_a_small_country_holding_nothing_keeps_its_zero():
+    # The opposite error: hiding a real zero behind a doubt we do not have.
+    # For a country using a few thousand tonnes a year, holding none is a fact.
+    balance = _hist("AAA", [2022, 2023, 2024], [0.0, 0.0, 0.0], supply_t=6_000)
+    trade = {"reported": {}, "mirrored": {}, "flags": {}}
+    row = commodities.profile("AAA", 2024, balance, trade)
+    assert row["estimated_cover_months"] == 0
+    assert row["stock_note"] is None
+
+
+def test_an_ordinary_stock_figure_is_published_untouched():
+    balance = _hist("AAA", [2022, 2023, 2024], [4_000_000, 4_200_000, 4_000_000])
+    trade = {"reported": {}, "mirrored": {}, "flags": {}}
+    row = commodities.profile("AAA", 2024, balance, trade)
+    assert row["estimated_cover_months"] == 2.0
+    assert row["stock_note"] is None
+
+
+def test_the_gate_refuses_a_figure_both_withheld_and_published():
+    extension = {"extension_version": 1, "products": {"wheat": {"year": 2024, "countries": {
+        "AAA": {"year": 2024, "suppliers": [], "gross_import_share_pct": None,
+                "apparent_supply_t": None, "estimated_cover_months": 1.2,
+                "stock_note": "withheld", "conflicts": []},
+    }}}}
+    problems = commodities.checks(extension)
+    assert any("withheld and published at once" in p for p in problems)
+
+
+def test_two_different_source_figures_keep_neither_and_report_it():
+    # A duplicate row must not end the run in a traceback, and must not be
+    # silently resolved by taking whichever arrived last.
+    rows = [
+        {"Item Code": "15", "Element Code": "5510", "Unit": "t", "Year": "2024",
+         "Area Code (M49)": "'012", "Value": "100", "Flag": "A"},
+        {"Item Code": "15", "Element Code": "5510", "Unit": "t", "Year": "2024",
+         "Area Code (M49)": "'012", "Value": "250", "Flag": "E"},
+    ]
+    entry = {"flags": {}}
+    balance = {"2024|DZA": entry}
+    for row in rows:
+        field = commodities.FIELDS[row["Element Code"]]
+        value = float(row["Value"])
+        if field in entry and entry[field] != value:
+            entry.setdefault("conflicts", []).append(field)
+            entry[field] = None
+            continue
+        entry[field] = value
+    assert entry["production"] is None
+    assert entry["conflicts"] == ["production"]

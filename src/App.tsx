@@ -14,12 +14,13 @@ import { HowItWorks } from "./pages/HowItWorks";
 /* Navigation in plain words. Nobody arriving here should have to work out what
  * "exposure analytics" or "systemic risk" means before they can find anything. */
 const NAV = [
-  { page: "home", label: "Overview" },
-  { page: "explore", label: "Explore" },
-  { page: "watch", label: "Watch" },
-  { page: "stress", label: "Stress Test" },
-  { page: "briefs", label: "Briefs" },
-  { page: "how", label: "Data & Methods" },
+  { page: "home", label: "What's happening" },
+  { page: "commodities", label: "Crops" },
+  { page: "countries", label: "Countries" },
+  { page: "chain", label: "How a shock travels" },
+  { page: "what-if", label: "What if" },
+  { page: "assumptions", label: "Our assumptions" },
+  { page: "how", label: "How this works" },
 ];
 
 export function App() {
@@ -48,10 +49,10 @@ export function App() {
     };
   }, []);
 
+  // A country profile belongs under Countries in the navigation, so the
+  // reader can see where they are rather than losing the highlight entirely.
   const current = route.page === "country" ? "countries" : route.page;
-  const active = ["country","countries"].includes(current) ? "explore" :
-    ["chain","assumptions"].includes(current) ? "watch" :
-    current === "what-if" ? "stress" : current === "wheat" ? "home" : current;
+  const active = current;
 
   return (
     <>
@@ -63,7 +64,7 @@ export function App() {
         <div className="masthead-inner">
           <a className="wordmark" href={href("home")}>
             Global Food System Observatory
-            <span>Food supply, dependencies, buffers and decisions</span>
+            <span>Where the world's staple crops come from, and what could interrupt them</span>
           </a>
           <nav className="main" aria-label="Main">
             <ul>
@@ -113,13 +114,14 @@ export function App() {
               </p>
             ) : null}
 
-            {(["home","explore","watch","stress","briefs"] as const).map(page => current === page ? (
-              <CommodityWorkspace key={page} release={state.release} route={route}
-                mode={page === "home" ? "overview" : page} />
-            ) : null)}
-            {current === "wheat" ? <Home release={state.release} /> : null}
-            {current === "explore" ? <p><a href={href("countries")}>Original detailed wheat country profiles</a></p> : null}
-            {current === "how" ? <p><a href="https://github.com/bdzion/global-food-system-observatory/blob/main/docs/multi-commodity.md">Multi-commodity methods and implementation audit</a> · <a href={href("assumptions")}>Wheat assumption ledger</a></p> : null}
+            {current === "commodities" ? (
+              <CommodityWorkspace
+                release={state.release}
+                route={route}
+                mode={route.id === "what-if" ? "stress" : "overview"}
+              />
+            ) : null}
+            {current === "home" ? <Home release={state.release} /> : null}
             {current === "countries" && !route.id ? (
               <Countries release={state.release} />
             ) : null}
@@ -136,7 +138,7 @@ export function App() {
             {current === "assumptions" ? <Assumptions release={state.release} /> : null}
             {current === "how" ? <HowItWorks release={state.release} /> : null}
 
-            {!NAV.some((n) => n.page === current) && !["country","countries","chain","what-if","assumptions","wheat"].includes(route.page) ? (
+            {!NAV.some((n) => n.page === current) && !["country","countries","chain","what-if","assumptions","commodities"].includes(route.page) ? (
               <>
                 <h1>That page is not here</h1>
                 <p>

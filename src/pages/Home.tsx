@@ -194,6 +194,17 @@ export function Home({ release }: { release: Release }) {
         </>
       ) : null}
 
+      <h2>Beyond wheat</h2>
+      <p>
+        The pages above are about wheat, which is where this project started
+        and where it goes into the most depth. The same annual figures —
+        what each country grew, bought, sold and had in store, and who it
+        bought from — are also published for rice, maize and soybeans.
+      </p>
+      <p>
+        <a href={href("commodities")}>See all four crops →</a>
+      </p>
+
       <h2>What we cannot see</h2>
       <p>
         Two of the seven links in the chain between a wheat field and a dinner

@@ -18,6 +18,9 @@ export interface CommodityProfile {
   gross_import_share_pct: number | null;
   opening_stocks_t: number | null;
   estimated_cover_months: number | null;
+  /** Set when we decline to publish a stock figure, and says why. */
+  stock_note: string | null;
+  conflicts: string[];
   food_use_t: number | null;
   flags: Record<string, string>;
   supplier_basis: "importer_reported" | "exporter_mirrored" | "unavailable";

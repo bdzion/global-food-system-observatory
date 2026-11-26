@@ -62,7 +62,14 @@ def read_slices(config, cache=None):
         field = FIELDS[row["Element Code"]]
         entry = balances[key].setdefault(f"{year}|{iso}", {"flags": {}})
         if field in entry and entry[field] != value:
-            raise ValueError(f"Conflicting SUA rows: {key}/{year}/{iso}/{field}")
+            # Two different figures for the same country, product, year and
+            # measure. The provider should not publish that, and if it does we
+            # keep neither: a release gate reports it and the previous release
+            # stays up. Raising here instead would end the run in a traceback
+            # rather than in the sentence a maintainer needs to read.
+            entry.setdefault("conflicts", []).append(field)
+            entry[field] = None
+            continue
         entry[field] = value
         entry["flags"][field] = (row.get("Flag") or "").strip()
 
@@ -103,13 +110,30 @@ def profile(iso, year, balance, trade):
     total = sum(rows.values())
     flags = trade["flags"].get(("direct|" if direct else "mirror|") + f"{year}|{iso}", {})
     suppliers = [
-        {"iso3": seller, "quantity_t": qty, "share_pct": 100 * qty / total,
+        {"iso3": seller, "quantity_t": core.rnd(qty, 0),
+         "share_pct": core.rnd(100 * qty / total, 2),
          "flag": flags.get(seller, "")}
         for seller, qty in sorted(rows.items(), key=lambda kv: (-kv[1], kv[0]))
     ] if total > 0 else []
+    # FAO's accounts close by using the change in stocks as the residual that
+    # makes everything else balance, which leaves some countries at or near
+    # zero in the newest year after years in the millions of tonnes. Publishing
+    # "0.0 months in store" for a country that holds grain would be a serious
+    # error, so the same two checks the wheat pages apply are applied here.
+    #
+    # They are not thresholds about any particular commodity: one asks whether
+    # the newest figure is a rounding error beside that country's own recent
+    # history, and the other whether a large buyer is recorded as holding under
+    # a week of use. Both are about whether the accounting has run out of room,
+    # which it does the same way whatever the crop.
     stock = record.get("opening_stocks")
-    # Do not transfer wheat-specific rejection thresholds to new commodities.
-    # Report the provider estimate with its flag, never claim measured reserves.
+    past_stocks = [
+        r.get("opening_stocks")
+        for key, r in sorted(balance.items())
+        if key.endswith("|" + iso) and int(key.split("|")[0]) < year
+    ]
+    monthly_use = supply / 12 if supply else None
+    stock, stock_note = analysis._usable_stocks(stock, past_stocks, year, monthly_use)
     stock_cover = 12 * stock / supply if stock is not None and supply else None
     history = [{"year": int(key.split("|")[0]),
                 **{field: r.get(field) for field in FIELDS.values()},
@@ -118,13 +142,15 @@ def profile(iso, year, balance, trade):
     return {
         "iso3": iso, "year": year, "production_t": p, "imports_t": m,
         "exports_t": x, "apparent_supply_t": supply,
-        "gross_import_share_pct": 100 * m / supply if supply and m is not None else None,
-        "opening_stocks_t": stock, "estimated_cover_months": stock_cover,
+        "gross_import_share_pct": core.rnd(100 * m / supply, 1) if supply and m is not None else None,
+        "opening_stocks_t": stock, "estimated_cover_months": core.rnd(stock_cover, 1),
+        "stock_note": stock_note,
         "food_use_t": record.get("food_use"),
-        "flags": record["flags"], "suppliers": suppliers,
+        "flags": record["flags"], "conflicts": record.get("conflicts", []),
+        "suppliers": suppliers,
         "supplier_basis": basis,
-        "supplier_coverage_pct": 100 * total / m if m is not None and m > 0 and total > 0 else None,
-        "supplier_hhi": sum((v / total) ** 2 for v in rows.values()) if total > 0 else None,
+        "supplier_coverage_pct": core.rnd(100 * total / m, 1) if m is not None and m > 0 and total > 0 else None,
+        "supplier_hhi": core.rnd(sum((v / total) ** 2 for v in rows.values()), 3) if total > 0 else None,
         "history": history,
     }
 
@@ -178,7 +204,7 @@ def build_extension(cache: Path | None, legacy: dict):
         "method": {
             "quantity": "Exact FAOSTAT item and tonne; no conversion or aggregation across product forms.",
             "gross_import_share_pct": "Imports / (production + imports - exports) × 100; requires all three quantities. Can exceed 100% for re-exporters; not net dependence.",
-            "estimated_cover_months": "Opening-stock estimate / apparent domestic availability × 12; not measured reserves, not a forecast. Not used to rank risks.",
+            "estimated_cover_months": "Opening-stock estimate / apparent domestic availability × 12; not measured reserves, not a forecast, and not used to rank risks. Where the provider's newest figure is a rounding error beside that country's own recent history, or a large buyer is recorded as holding under a week of use, no figure is published and the reason is given instead.",
             "supplier_share": "Share of observed bilateral flows, not all imports; importer report preferred, mirror fallback; coverage can exceed 100% due to source discrepancies.",
             "food_price_gap": "National food CPI growth minus general CPI growth; not commodity-specific.",
             "healthy_diet_unaffordable": "FAO modelled national estimate, not commodity-specific.",
@@ -189,6 +215,13 @@ def build_extension(cache: Path | None, legacy: dict):
 
 def checks(extension):
     problems = []
+    for key, product in extension["products"].items():
+        for iso, row in product["countries"].items():
+            for field in row.get("conflicts") or []:
+                problems.append(
+                    f"{key}/{iso}: the source published two different figures for "
+                    f"{field} in {row['year']}; neither was used"
+                )
     if extension.get("extension_version") != 1:
         problems.append("Unknown commodity extension format")
     for key, product in extension["products"].items():
@@ -197,8 +230,13 @@ def checks(extension):
         for iso, row in product["countries"].items():
             if row["year"] != product["year"]:
                 problems.append(f"{key}/{iso}: mixed observation years")
-            if row["suppliers"] and abs(sum(s["share_pct"] for s in row["suppliers"]) - 100) > 1e-6:
+            # Published shares are rounded to two decimals, so a few hundredths
+            # of drift across many suppliers is arithmetic, not a fault. Half a
+            # percentage point still catches a supplier that went missing.
+            if row["suppliers"] and abs(sum(s["share_pct"] for s in row["suppliers"]) - 100) > 0.5:
                 problems.append(f"{key}/{iso}: supplier shares do not sum to 100")
+            if row["estimated_cover_months"] is not None and row["stock_note"]:
+                problems.append(f"{key}/{iso}: a stock figure was withheld and published at once")
             if row["gross_import_share_pct"] is not None and row["apparent_supply_t"] is None:
                 problems.append(f"{key}/{iso}: import share without denominator")
     return problems
