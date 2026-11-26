@@ -36,6 +36,17 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
     return () => { cancelled = true; };
   }, [release.manifest]);
 
+  useEffect(() => {
+    const product = route.query.get("commodity");
+    const geography = route.query.get("geo");
+    if (product) setSelected(product);
+    if (geography) setIso(geography);
+    if (product || geography) {
+      try { localStorage.setItem(STORE, JSON.stringify({ commodity: product || readPreference("commodity", "wheat"), geo: geography || readPreference("geo", "global") })); } catch { /* optional */ }
+      setSupplier("");
+    }
+  }, [route.query]);
+
   function select(product: string, geography: string) {
     setSelected(product); setIso(geography); setSupplier("");
     try { localStorage.setItem(STORE, JSON.stringify({ commodity: product, geo: geography })); } catch { /* optional */ }
