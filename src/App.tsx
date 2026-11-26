@@ -3,6 +3,7 @@ import { lastSeenRelease, loadRelease, rememberRelease, type LoadState } from ".
 import { href, useRoute } from "./lib/router";
 import { dateWords } from "./lib/format";
 import { Home } from "./pages/Home";
+import { Overview } from "./pages/Overview";
 import { ReaderGuide } from "./components/ReaderGuide";
 import { DecisionIntelligence } from "./components/DecisionIntelligence";
 import { SourceAtlas, SystemPathways } from "./components/SourceAtlas";
@@ -18,7 +19,8 @@ import {Landscape} from "./components/Landscape";
 /* Navigation in plain words. Nobody arriving here should have to work out what
  * "exposure analytics" or "systemic risk" means before they can find anything. */
 const NAV = [
-  { page: "home", label: "The system" },
+  { page: "home", label: "Overview" },
+  { page: "system", label: "The system" },
   { page: "commodities", label: "The indicators" },
   { page: "watch", label: "The threats" },
   { page: "stress", label: "Possible timelines" },
@@ -55,7 +57,7 @@ export function App() {
   // A country profile belongs under Countries in the navigation, so the
   // reader can see where they are rather than losing the highlight entirely.
   const current = route.page === "country" ? "countries" : route.page;
-  const active = ["countries","country"].includes(current) ? "commodities" : ["chain","assumptions"].includes(current) ? "watch" : current === "what-if" || (current==="commodities"&&route.id==="what-if") ? "stress" : current === "wheat" ? "home" : current;
+  const active = ["countries","country"].includes(current) ? "commodities" : ["chain","assumptions"].includes(current) ? "watch" : current === "what-if" || (current==="commodities"&&route.id==="what-if") ? "stress" : current === "wheat" ? "system" : current;
   const [theme,setTheme]=useState(()=>{try{return localStorage.getItem("gfso.theme")||"auto"}catch{return "auto"}});
   useEffect(()=>{if(theme==="auto")delete document.documentElement.dataset.gfsoTheme;else document.documentElement.dataset.gfsoTheme=theme;try{localStorage.setItem("gfso.theme",theme)}catch{/* optional */}},[theme]);
 
@@ -121,7 +123,8 @@ export function App() {
               </p>
             ) : null}
 
-            {current==="home" ? <ReaderGuide release={state.release} route={route}/> : null}
+            {current==="home" ? <Overview release={state.release} route={route}/> : null}
+            {current==="system" ? <ReaderGuide route={route}/> : null}
             {["commodities","stress"].includes(current) ? (
               <CommodityWorkspace
                 release={state.release}
@@ -131,7 +134,6 @@ export function App() {
               />
             ) : null}
             {current === "wheat" ? <Home release={state.release} /> : null}
-            {current === "home" ? <><p>Related project: <a href="https://bdzion.github.io/canada-food-system-observatory/#/">Canada Food System Observatory</a></p></> : null}
             {current === "commodities" ? <p><a href={href("countries")}>Detailed wheat country figures</a></p> : null}
             {current === "watch" ? <><DecisionIntelligence key="watch" release={state.release} route={route} mode="watch"/><SystemPathways/><p><a href={href("chain")}>Detailed wheat supply-chain analysis</a> · <a href={href("assumptions")}>Assumptions behind the wheat scenario</a></p></> : null}
             {current === "briefs" ? <DecisionIntelligence key="briefs" release={state.release} route={route} mode="briefs"/> : null}
@@ -155,7 +157,7 @@ export function App() {
               <>
                 <h1>That page is not here</h1>
                 <p>
-                  <a href={href("home")}>Start from what's happening</a>.
+                  <a href={href("home")}>Start from the overview</a>.
                 </p>
               </>
             ) : null}

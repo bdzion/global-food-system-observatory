@@ -131,3 +131,22 @@ export function shipmentTimeline(annualFlow:number,stopPct:number,months:number,
  if(!Number.isInteger(months)||months<1||months>12)throw new RangeError('Expected whole months 1–12');
  return [{month:0,none:0,early:0,late:0},...Array.from({length:months},(_,i)=>{const month=i+1;const early=shipmentScenario(annualFlow,stopPct,month,replacementPct,0,capacityPct);const late=shipmentScenario(annualFlow,stopPct,month,replacementPct,leadMonths,capacityPct);return {month,none:early.gross,early:early.residual,late:late.residual}})];
 }
+
+/* Which prices are current enough to judge, and which are moving unusually.
+ *
+ * Shared rather than recomputed per page. A reader who is told three prices
+ * are moving on the overview and two on the threats page stops believing
+ * either number, and that is a cheap way to lose someone's trust. */
+export function priceSignals(
+  prices: Record<string, Price>,
+  keep: (p: Price) => boolean = () => true,
+  now = new Date(),
+) {
+  const all = Object.values(prices);
+  const current = all.filter(p => priceAge(p.latest_period, now) === "current" && keep(p));
+  const moving = current
+    .filter(p => ["climbing", "climbing_fast", "falling"].includes(p.climb_reading.state) && p.climb_anomaly != null)
+    .sort((a, b) => Math.abs(b.climb_anomaly!) - Math.abs(a.climb_anomaly!));
+  const stale = all.filter(p => priceAge(p.latest_period, now) !== "current");
+  return { all, current, moving, stale };
+}

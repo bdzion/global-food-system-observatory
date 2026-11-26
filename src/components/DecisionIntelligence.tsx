@@ -1,5 +1,5 @@
 import { useEffect,useState } from "react";
-import { loadCommodityIndex, coverageFor, priceAge, type CommodityRelease } from "../lib/commodities";
+import {loadCommodityIndex,coverageFor,type CommodityRelease,priceSignals} from "../lib/commodities";
 import { hasFile, readVerified } from "../lib/data";
 import { ExternalEvidence } from "./ExternalEvidence";
 import { ApiEvidence } from "./ApiEvidence";
@@ -32,10 +32,8 @@ export function DecisionIntelligence({release,route,mode}:{release:Release;route
  const selected=commodity==="all"||Object.hasOwn(products,commodity)?commodity:"all";
  const country=geo==="global"?"Global":names[geo]||geo;
  const benchmark=selected==="all"?undefined:products[selected]?.price?.id;
- const all=Object.values(release.world.prices);
- const eligible=all.filter(p=>priceAge(p.latest_period)==="current"&&relevant(p,selected,benchmark));
- const signals=eligible.filter(p=>["climbing","climbing_fast","falling"].includes(p.climb_reading.state)&&p.climb_anomaly!=null).sort((a,b)=>Math.abs(b.climb_anomaly!)-Math.abs(a.climb_anomaly!));
- const excluded=all.filter(p=>priceAge(p.latest_period)!=="current");
+ // Shared with the overview so the two pages cannot report different counts.
+ const {current:eligible,moving:signals,stale:excluded}=priceSignals(release.world.prices,p=>relevant(p,selected,benchmark));
  const coverage=data?coverageFor(data):{};
  const coverageRows=Object.values(coverage);
  const countryRows=Object.entries(products).filter(([id])=>selected==="all"||id===selected).flatMap(([id,p])=>p.countries[geo]?[{id,name:p.name,year:p.year,r:p.countries[geo]}]:[]);

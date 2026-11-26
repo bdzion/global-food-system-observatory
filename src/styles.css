@@ -565,3 +565,19 @@ button.rank-label{border:0;background:none;color:var(--accent);font:inherit;text
    much as its name — a reader deciding whether to trust a figure wants to know
    whose it is — so it sits under the name rather than in a column of its own. */
 .landscape-run { display: block; font-weight: 400; font-size: 0.84rem; color: var(--ink-soft); margin-top: 0.15rem; }
+
+/* The five stages as a compact band on the overview. The full drawing lives on
+   the system page; here the chain only has to be recognisable, so names and
+   arrows are enough and they reflow on a phone without hiding anything. */
+.stage-band { list-style: none; display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin: 1rem 0; padding: 0; }
+.stage-band li {
+  display: flex; align-items: baseline; gap: 0.4rem;
+  border: 1px solid var(--line); border-radius: 999px;
+  background: var(--accent-soft); padding: 0.4rem 0.85rem; font-weight: 600;
+}
+.stage-band li + li::before { content: "\2192"; margin-right: 0.3rem; opacity: 0.6; font-weight: 400; }
+.stage-band-n { font-size: 0.78rem; color: var(--ink-soft); font-weight: 650; }
+/* Four figures read better a little smaller than the three this grid was
+   built for, or the numbers crowd their own captions. */
+.overview-strip strong { font-size: 1.55rem; }
+.overview-strip span { font-size: 0.93rem; }
