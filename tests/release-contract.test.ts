@@ -196,11 +196,38 @@ describe.skipIf(!present)("a published release", () => {
     const sources: any[] = read("sources.json").sources ?? [];
 
     it("publish nothing whose redistribution right is not cleared", () => {
+      /* A source whose figures go into the release must be cleared to
+       * redistribute them. A source we only link out to need not be, but it
+       * must say so: `publishes: pointers` is the registry's way of promising
+       * that none of its content is carried here, and anything that does not
+       * say otherwise is treated as carrying figures. */
       for (const source of sources) {
+        if (source.publishes === "pointers") {
+          expect(
+            ["link_only", "attribution_only", "may_republish"],
+            `${source.id} redistribution`,
+          ).toContain(source.redistribution);
+          continue;
+        }
         expect(
           ["may_republish", "attribution_only"],
           `${source.id} redistribution`,
         ).toContain(source.redistribution);
+      }
+    });
+
+    it("carry no report text for any source we only link out to", () => {
+      /* The reason link_only is allowed at all is that the release stores
+       * pointers. If that ever stops being true, this fails. */
+      if (!present || !existsSync(`${DIR}/reports.json`)) return;
+      const payload = read("reports.json");
+      expect(payload.source.redistribution).toBe("link_only");
+      for (const report of payload.reports ?? []) {
+        expect(Object.keys(report).sort()).toEqual([
+          "countries", "forward_looking", "iso3", "kind", "published",
+          "publisher", "themes", "title", "url",
+        ]);
+        expect(report.url).toMatch(/^https:\/\//);
       }
     });
 

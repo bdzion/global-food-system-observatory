@@ -532,3 +532,36 @@ button.rank-label{border:0;background:none;color:var(--accent);font:inherit;text
    drawn on the container itself so it is visible when tabbed to. */
 .commodity-table:focus-visible,
 .table-wrap:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+
+/* What others are reporting. A list of pointers, not a table: each entry is a
+   title that leads somewhere else, and the metadata exists only to help a
+   reader judge whether it is worth following. */
+.report-stream { list-style: none; margin: 1rem 0; padding: 0; }
+.report-stream li {
+  border-top: 1px solid var(--line);
+  padding: 0.85rem 0;
+  display: grid;
+  gap: 0.25rem;
+}
+.report-stream li:last-child { border-bottom: 1px solid var(--line); }
+.report-stream a { font-weight: 600; line-height: 1.45; }
+.report-meta,
+.report-tags { font-size: 0.86rem; color: var(--ink-soft); margin: 0; }
+.report-meta time { font-variant-numeric: tabular-nums; }
+.report-flag {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.05rem 0.45rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 650;
+}
+.report-stream button.reader-next { cursor: pointer; font: inherit; font-weight: 650; }
+
+/* The platform comparison. The organisation that runs each platform matters as
+   much as its name — a reader deciding whether to trust a figure wants to know
+   whose it is — so it sits under the name rather than in a column of its own. */
+.landscape-run { display: block; font-weight: 400; font-size: 0.84rem; color: var(--ink-soft); margin-top: 0.15rem; }

@@ -9,6 +9,11 @@
 # redistribution:    may_republish | attribution_only | link_only | unknown
 #                    The release build refuses to publish a download for any
 #                    source that is not may_republish or attribution_only.
+# publishes:         figures | pointers
+#                    "figures" means the release carries this source's numbers,
+#                    so its redistribution right must be cleared. "pointers"
+#                    means the release carries only titles and links out, which
+#                    a link_only source permits.
 # stale_after_days:  how old the newest observation may be before the site says
 #                    the source is older than expected. Set from the provider's
 #                    normal publication rhythm plus a margin, never from how
@@ -131,6 +136,33 @@ sources:
 
 # Considered and not used in this first version. Each entry says why, so the
 # next person does not repeat the work.
+  - id: RELIEFWEB
+    provider: UN Office for the Coordination of Humanitarian Affairs
+    dataset: "ReliefWeb updates (RSS, food and agriculture)"
+    documentation_url: https://apidoc.reliefweb.int/
+    endpoint: https://reliefweb.int/updates/rss.xml
+    access_type: rss
+    licence: "Per-report: each item remains the property of its publishing organisation"
+    licence_url: https://reliefweb.int/terms-conditions
+    redistribution: link_only
+    publishes: pointers
+    evidence_class: third_party_assessment
+    expected_frequency: continuous
+    stale_after_days: 7
+    plain_name: What other organisations are reporting
+    caveat: >-
+      Other organisations' assessments, not ours, and not a complete picture:
+      a country appears here only if someone filed a report under it. Absence
+      of a report is not evidence that nothing is happening.
+    status: validated_connector
+    note: >-
+      Titles and links only, never report text. ReliefWeb carries the published
+      output of several thousand organisations, including FEWS NET, the IPC,
+      FAO and WFP, so one feed surfaces the named early-warning products a
+      decision-maker is asked about. These are other organisations'
+      assessments; nothing here is computed by this site, and no item is
+      treated as a signal.
+
 not_used:
   - id: UN-COMTRADE
     provider: United Nations Statistics Division

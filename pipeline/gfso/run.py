@@ -12,7 +12,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import SCHEMA_VERSION, build, core, commodities, intelligence, external, api_evidence, spatial, validation, authenticated, release_quality
+from . import SCHEMA_VERSION, build, core, commodities, intelligence, external, api_evidence, spatial, validation, authenticated, release_quality, reports
 
 
 class GateFailed(RuntimeError):
@@ -72,6 +72,20 @@ def checks(release: dict) -> list[str]:
 
     sources = release["sources"]["sources"]
     for source in sources:
+        # A source whose figures go into the release must be cleared to
+        # redistribute them. A source we only link out to need not be, but it
+        # has to say so: `publishes: pointers` in the registry is the promise
+        # that none of its content is carried here. Anything that stays silent
+        # is treated as carrying figures, which is the stricter reading.
+        if source.get("publishes", "figures") == "pointers":
+            if source["redistribution"] not in (
+                "may_republish", "attribution_only", "link_only",
+            ):
+                problems.append(
+                    f"source {source['id']} is linked but its terms do not "
+                    "permit even that"
+                )
+            continue
         if source["redistribution"] not in ("may_republish", "attribution_only"):
             problems.append(
                 f"source {source['id']} is published but its redistribution right "
@@ -157,6 +171,7 @@ def main(argv: list[str] | None = None) -> int:
     release["country-context"] = intelligence.context(release["commodity-index"]["country_names"])
     release["external-evidence"] = external.gather(args.cache)
     release["api-evidence"] = api_evidence.gather()
+    release["reports"] = reports.gather()
     release["spatial-evidence"] = spatial.gather(args.cache)
     release["scientific-validation"] = validation.evaluate(data["pink"])
     release["authenticated-evidence"] = authenticated.gather(release["external-evidence"]["psd"].get("records",[]))

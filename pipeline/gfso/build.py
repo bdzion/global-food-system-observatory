@@ -458,6 +458,7 @@ def _source_status(data: dict, registry: dict) -> list[dict]:
                 "licence_url": source["licence_url"],
                 "documentation_url": source["documentation_url"],
                 "redistribution": source["redistribution"],
+                "publishes": source.get("publishes", "figures"),
                 "status": source["status"],
                 "provider_updated": updated,
                 "days_old": age,
