@@ -12,7 +12,7 @@ import argparse
 import sys
 from pathlib import Path
 
-from . import SCHEMA_VERSION, build, core, commodities, intelligence, external, api_evidence, spatial, validation, authenticated
+from . import SCHEMA_VERSION, build, core, commodities, intelligence, external, api_evidence, spatial, validation, authenticated, release_quality
 
 
 class GateFailed(RuntimeError):
@@ -85,6 +85,7 @@ def checks(release: dict) -> list[str]:
     if "commodities" in release:
         problems.extend(commodities.checks(release["commodities"]))
 
+    problems.extend(release_quality.checks(release))
     return problems
 
 
