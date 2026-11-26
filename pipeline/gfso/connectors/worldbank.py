@@ -72,6 +72,17 @@ SERIES = {
 }
 
 
+# Additional benchmarks are optional: a missing column cannot disable the
+# original validated series. Exact published column names only.
+OPTIONAL_SERIES = {
+    "Rice, Thai 5%": {"id":"rice_price","plain":"Thai 5% broken milled rice benchmark","why":"Export reference, not a domestic rice price.","unit":"US$ per tonne"},
+    "Soybeans": {"id":"soybean_price","plain":"Soybean benchmark","why":"Oilseed and feed-market pressure.","unit":"US$ per tonne"},
+    "Palm oil": {"id":"palm_oil_price","plain":"Palm oil benchmark","why":"International edible-oil reference price.","unit":"US$ per tonne"},
+    "Soybean oil": {"id":"soybean_oil_price","plain":"Soybean oil benchmark","why":"International edible-oil reference price.","unit":"US$ per tonne"},
+    "Barley": {"id":"barley_price","plain":"Barley benchmark","why":"International feed-grain reference price; series may be discontinued.","unit":"US$ per tonne"},
+    "Sorghum": {"id":"sorghum_price","plain":"Sorghum benchmark","why":"International grain reference price; series may be discontinued.","unit":"US$ per tonne"},
+}
+
 def workbook_url() -> str:
     """Find the address of this month's price workbook."""
     page = core.fetch(MARKETS_PAGE, timeout=90)
@@ -124,8 +135,11 @@ def pink_sheet(cache: Path | None = None) -> dict:
             "the Pink Sheet workbook no longer has these columns: " + ", ".join(missing)
         )
 
+    optional = {name: meta for name, meta in OPTIONAL_SERIES.items() if name in columns}
+    wanted.update({columns[name]: meta for name, meta in optional.items()})
+    active = {**SERIES, **optional}
     periods: list[str] = []
-    series: dict[str, list[float | None]] = {m["id"]: [] for m in SERIES.values()}
+    series: dict[str, list[float | None]] = {m["id"]: [] for m in active.values()}
     for row in rows[6:]:
         label = row[0]
         if not label or not re.fullmatch(r"\d{4}M\d{2}", str(label).strip()):
@@ -146,7 +160,7 @@ def pink_sheet(cache: Path | None = None) -> dict:
         "source_url": url,
         "periods": periods,
         "series": series,
-        "meta": {m["id"]: m for m in SERIES.values()},
+        "meta": {m["id"]: m for m in active.values()},
     }
 
 

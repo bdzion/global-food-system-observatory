@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
+import { WorldEvidenceMap, RankedBars, PriceTrend, CountryTrends } from "../components/EvidenceVisuals";
 import { loadCommodities, shipmentScenario, type CommodityRelease, type CommodityProfile } from "../lib/commodities";
 import { href, type Route } from "../lib/router";
 import { monthWords, tonnes } from "../lib/format";
 import type { Release } from "../lib/types";
 
-type Mode = "overview" | "stress";
+type Mode = "overview" | "explore" | "stress";
 type Result = { kind: "loading" } | { kind: "legacy" } | { kind: "error"; message: string } | { kind: "ready"; data: CommodityRelease };
 const STORE = "gfso.commodity-context.v1";
 const readPreference = (key: string, fallback: string) => {
@@ -41,6 +42,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
   const [delay, setDelay] = useState(2);
   const [supplier, setSupplier] = useState("");
   const [compound, setCompound] = useState(false);
+  const [group, setGroup] = useState("staples");
 
   useEffect(() => {
     let cancelled = false;
@@ -72,7 +74,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
   }
 
   if (result.kind === "loading") return <p role="status">Loading commodity evidence…</p>;
-  if (result.kind === "legacy") return <section className="commodity-panel"><h2>These figures have not been published yet</h2><p>This release covers wheat only. Nothing is shown for the other crops, because we would be making it up.</p><a href={href("home")}>Go to the front page</a></section>;
+  if (result.kind === "legacy") return <section className="commodity-panel"><h2>These figures have not been published yet</h2><p>This release covers wheat only. Nothing is shown for the other crops, because we would be making it up.</p><a href={href("wheat")}>Open original wheat evidence</a></section>;
   if (result.kind === "error") return <section className="commodity-panel"><h2>The crop figures could not be loaded</h2><p role="alert">Nothing is being shown rather than a page that looks empty. Reason given: {result.message}</p><a href={href("home")}>Go to the front page</a></section>;
   const { products, sources, provider_updated, method } = result.data;
   const key = Object.hasOwn(products, selected) ? selected : "wheat";
@@ -86,7 +88,7 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
   const profile = product.countries[geo];
   const actualSupplier = profile?.suppliers.find(s => s.iso3 === supplier) || profile?.suppliers[0];
   const scenarioRows = profile && actualSupplier
-    ? Object.entries(products).filter(([id]) => id === key || (compound && id !== "rice_paddy" && id !== "rice" && id !== key))
+    ? Object.entries(products).filter(([id]) => id === key || (compound && ["wheat","maize","soybeans","rice","palm_oil","soybean_oil","chicken","eggs"].includes(id) && !(key === "rice_paddy" && id === "rice") && id !== key))
       .map(([id, p]) => {
         const buyer = p.countries[geo];
         const flow = buyer?.suppliers.find(s => s.iso3 === actualSupplier.iso3);
@@ -95,35 +97,40 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
           late: flow ? shipmentScenario(flow.quantity_t, stop, months, replacement, delay) : null };
       }) : [];
   const imports = [...countries].filter(c => c.imports_t != null).sort((a,b) => b.imports_t! - a.imports_t!);
-  const title = {overview:"Four crops the world trades",stress:"What if shipments stopped?"}[mode];
+  const title = {overview:"A connected global food system",explore:"Explore global food-system evidence",stress:"What if shipments stopped?"}[mode];
+  const groupOf = (id:string) => products[id].group || (id === "soybeans" ? "oils" : "staples");
+  const groups = [["all","All products"],["staples","Staple crops"],["oils","Oilseeds & edible oils"],["pulses","Pulses"],["animal","Animal-source foods"],["fresh","Fresh foods"]];
   return <section className="commodity-workspace">
     <div className="commodity-intro">
       <p className="commodity-kicker">A research project · not an official warning system</p>
       <h1>{title}</h1>
-      <p className="lede">Wheat, rice, maize and soybeans: how much each country grows, how much it buys, and who it buys from. These figures are published once a year and describe the shape of a country’s supply, not what is happening this month.</p>
+      <p className="lede">Track production, markets, trade and resilience buffers across interconnected foods. Annual figures describe structural exposure, not current shortages. New evidence domains are added only when source and validation requirements are met.</p>
     </div>
     <div className="commodity-filter" aria-label="Choose a crop and a country">
-      <label>Crop<select value={key} onChange={e => select(e.target.value, geo)}>{Object.entries(products).map(([id,p]) => <option key={id} value={id}>{p.name}</option>)}</select></label>
+      <label>Commodity<select value={key} onChange={e => select(e.target.value, geo)}>{Object.entries(products).map(([id,p]) => <option key={id} value={id}>{p.name}</option>)}</select></label>
       <label>Country<select value={geo} onChange={e => select(key, e.target.value)}><option value="global">Global</option>{choices.map(([id,n]) => <option key={id} value={id}>{n}</option>)}</select></label>
       <p className="figure-note" role="status">{product.name} · {geo === "global" ? "Global" : allCountries.get(geo)} · figures for {product.year ?? "an unknown year"}</p>
     </div>
+    {(mode === "overview" || mode === "explore") && <WorldEvidenceMap product={product} selected={geo} onSelect={id=>select(key,id)}/>}
     {mode === "overview" && <>
       <h2>What we cover</h2>
-      <div className="commodity-grid">{Object.entries(products).map(([id,p]) => <article className="commodity-panel" key={id}>
-        <h3>{p.name}</h3><p>{p.role}</p><p><strong>{Object.keys(p.countries).length}</strong> countries · {p.year ?? "no year"}</p>
-        <p>{p.price ? <>{p.price.plain_name}: {number(p.price.latest_value, 1)} {p.price.unit} ({monthWords(p.price.latest_period)})</> : "No world price series connected for this crop yet"}</p>
+      <div className="product-groups" aria-label="Filter product catalogue">{groups.map(([id,label])=><button key={id} className="visual-button" aria-pressed={group===id} onClick={()=>setGroup(id)}>{label}</button>)}</div>
+      <div className="commodity-grid">{Object.entries(products).filter(([id])=>group==="all"||groupOf(id)===group).map(([id,p]) => <article className="commodity-panel" key={id}>
+        <h3>{p.name}</h3><p>{p.role}</p><p><strong>{Object.keys(p.countries).length}</strong> country records · {p.year ?? "no year"}</p>
+        <p>{p.price ? <>{p.price.plain_name}: {number(p.price.latest_value, 1)} {p.price.unit} ({monthWords(p.price.latest_period)})</> : "No benchmark price connected for this product"}</p>
         <a href={href("commodities", undefined, {commodity:id, geo})}>Explore {p.name.toLowerCase()}</a>
       </article>)}</div>
-      <h2>Costs that affect every crop</h2><div className="commodity-grid">{Object.values(release.world.prices).filter(p => ["urea_price","dap_price","potash_price","oil_price","gas_price"].includes(p.id)).map(p => <article className="commodity-panel" key={p.id}><h3>{p.plain_name}</h3><strong>{number(p.latest_value,1)} {p.unit}</strong><p>{monthWords(p.latest_period)} · {percent(p.change_over_year_pct)} different from a year earlier</p></article>)}</div>
+      <h2>Shared pressures: energy and fertilizer</h2><div className="commodity-grid">{Object.values(release.world.prices).filter(p => ["urea_price","dap_price","potash_price","oil_price","gas_price"].includes(p.id)).map(p => <article className="commodity-panel" key={p.id}><h3>{p.plain_name}</h3><strong>{number(p.latest_value,1)} {p.unit}</strong><p>{monthWords(p.latest_period)} · {percent(p.change_over_year_pct)} different from a year earlier</p></article>)}</div>
       <p className="figure-note">These are world reference prices. They are not the price any particular farmer or buyer paid, and a rise here reaches a harvest months later, not this week.</p>
     </>}
-    {mode === "overview" && <>
+    {(mode === "overview" || mode === "explore") && <>
+      <PriceTrend price={product.price}/>
       <h2>{product.name}: {geo === "global" ? "reported trade" : allCountries.get(geo)}</h2>
       <p>{product.role}. Figures are for this exact product only — milled rice is never added to paddy, and soybeans are never added to soybean oil, because they are not the same thing. (FAOSTAT item {product.item_code}.)</p>
-      {geo === "global" ? <div className="commodity-grid">
+      {geo === "global" ? <><div className="visual-grid"><RankedBars title="Largest reported exporters" unit="t" rows={product.exporters.slice(0,8).map(c=>({id:c.iso3,name:c.name,value:c.exports_t}))} onSelect={id=>select(key,id)}/><RankedBars title="Largest reported importers" unit="t" rows={imports.slice(0,8).map(c=>({id:c.iso3,name:c.name,value:c.imports_t!}))} onSelect={id=>select(key,id)}/></div><div className="commodity-grid">
         <article className="commodity-panel"><h3>Biggest sellers</h3>{product.exporters.length ? <ol>{product.exporters.map(c => <li key={c.iso3}><a href={href("commodities",undefined,{commodity:key,geo:c.iso3})}>{c.name}</a> — {t(c.exports_t)}</li>)}</ol> : <p>Not available.</p>}</article>
         <article className="commodity-panel"><h3>Biggest buyers</h3>{imports.length ? <ol>{imports.slice(0,12).map(c => <li key={c.iso3}><a href={href("commodities",undefined,{commodity:key,geo:c.iso3})}>{c.name}</a> — {t(c.imports_t)}</li>)}</ol> : <p>Not available.</p>}</article>
-      </div> : profile ? <>
+      </div></> : profile ? <>
         <div className="commodity-grid">{[
           ["Grew",t(profile.production_t),profile.flags.production],
           ["Bought from abroad",t(profile.imports_t),profile.flags.imports],
@@ -137,6 +144,8 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
         <h3>Who it buys from</h3>
         <p>{profile.supplier_basis === "importer_reported" ? "This country reports its own purchases, so this is its own account of who it buys from." : profile.supplier_basis === "exporter_mirrored" ? "This country does not report its own purchases. The list below is pieced together from what other countries said they sold it, so it covers only the sellers who do report." : "Neither this country nor its suppliers report this trade in a form we can use."} The sellers below account for about {percent(profile.supplier_coverage_pct)} of what it is recorded as buying.</p>
         {profile.suppliers.length ? <div className="commodity-table"><table><caption>Observed supplier flows · {profile.year}</caption><thead><tr><th>Supplier</th><th>Tonnes</th><th>Share</th><th>Where the figure comes from</th></tr></thead><tbody>{profile.suppliers.slice(0,15).map(s => <tr key={s.iso3}><th scope="row">{s.name}</th><td>{number(s.quantity_t)}</td><td>{percent(s.share_pct)}</td><td>{sourceWords(s.flag)}</td></tr>)}</tbody></table></div> : <p>No bilateral flow evidence.</p>}
+        <RankedBars title="Largest observed suppliers — share of reported bilateral flows" unit="%" rows={profile.suppliers.slice(0,8).map(s=>({id:s.iso3,name:s.name,value:s.share_pct}))}/>
+        <CountryTrends profile={profile}/>
         <h3>Earlier years</h3><div className="commodity-table"><table><caption>Annual quantities in tonnes, same product form</caption><thead><tr><th>Year</th><th>Production</th><th>Imports</th><th>Exports</th></tr></thead><tbody>{profile.history.map(y => <tr key={y.year}><th scope="row">{y.year}</th><td>{number(y.production)}</td><td>{number(y.imports)}</td><td>{number(y.exports)}</td></tr>)}</tbody></table></div>
         <h3>What this means for households</h3><p>National food inflation minus general inflation: {profile.food_price_gap ? number(profile.food_price_gap.gap_pct_points,1)+" percentage points ("+monthWords(profile.food_price_gap.period)+")" : "Not available"}. Unable to afford a healthy diet: {profile.healthy_diet_unaffordable ? percent(profile.healthy_diet_unaffordable.value)+" ("+profile.healthy_diet_unaffordable.year+")" : "Not available"}. Neither indicator is specific to this commodity.</p>
       </> : <p>We hold no figures for this crop in this country for that year. That is a gap in what is published, not a statement that the country grows or buys none.</p>}
@@ -152,8 +161,9 @@ export function CommodityWorkspace({ release, route, mode }: { release: Release;
           <label>How much can be bought elsewhere: {replacement}%<input type="range" min="0" max="100" step="5" value={replacement} onChange={e=>setReplacement(+e.target.value)}/></label>
           <label>Months before anyone acts: {delay} months<input type="range" min="0" max="12" value={delay} onChange={e=>setDelay(+e.target.value)}/></label>
         </div>
-        <label className="commodity-check"><input type="checkbox" checked={compound} onChange={e=>setCompound(e.target.checked)}/> Apply the same supplier disruption to wheat, maize and soybeans as additional independent scenarios (rice forms never added together)</label>
+        <label className="commodity-check"><input type="checkbox" checked={compound} onChange={e=>setCompound(e.target.checked)}/> Apply the same supplier disruption to other selected product forms as independent scenarios (not summed; rice forms never added together)</label>
         <div className="commodity-table"><table><caption>{nameFor(profile)} · conditional shipment gaps, metric tonnes; different products are not summed</caption><thead><tr><th>Commodity / year</th><th>Reporting basis</th><th>No action</th><th>Early action</th><th>Delayed action</th></tr></thead><tbody>{scenarioRows.map(s=><tr key={s.id}><th scope="row">{s.name} · {s.year ?? "unknown"}</th><td>{s.flow == null ? "Unknown" : s.basis?.replaceAll("_"," ")}</td><td>{t(s.early?.gross)}</td><td>{t(s.early?.residual)}</td><td>{t(s.late?.residual)}</td></tr>)}</tbody></table></div>
+        {scenarioRows.map(s=>s.early&&s.late?<RankedBars key={s.id} title={s.name+" — remaining shipment gap"} unit="t" rows={[{id:"none",name:"No action",value:s.early.gross},{id:"early",name:"Early action",value:s.early.residual},{id:"late",name:"Delayed action",value:s.late.residual}]}/>:null)}
         <p className="figure-note">Early action assumes replacement begins immediately; delayed action starts after the selected lead time. Replacement availability is hypothetical; the same supplier may serve competing buyers. No aggregation or substitution across products is inferred.</p>
         <h3>Decision options and constraints</h3><div className="commodity-grid"><article className="commodity-panel"><strong>Importers</strong><p>Check alternative suppliers' exportable surplus, financing and transit time before purchasing.</p></article><article className="commodity-panel"><strong>Government</strong><p>Independently verify accessible reserves and assess targeted affordability support. Consider displacement of other buyers.</p></article></div>
       </>}

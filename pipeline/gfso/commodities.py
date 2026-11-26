@@ -95,7 +95,7 @@ def read_slices(config, cache=None):
     return balances, trades
 
 
-def profile(iso, year, balance, trade):
+def profile(iso, year, balance, trade, *, perishable=False):
     record = balance.get(f"{year}|{iso}")
     if record is None:
         return None
@@ -133,7 +133,13 @@ def profile(iso, year, balance, trade):
         if key.endswith("|" + iso) and int(key.split("|")[0]) < year
     ]
     monthly_use = supply / 12 if supply else None
-    stock, stock_note = analysis._usable_stocks(stock, past_stocks, year, monthly_use)
+    if perishable:
+        stock = None
+        stock_note = "This exact product is perishable. Annual grain-style stock cover is not a valid measure of accessible cold-chain or fresh-food inventory."
+    else:
+        stock, stock_note = analysis._usable_stocks(stock, past_stocks, year, monthly_use)
+        if stock_note:
+            stock_note = stock_note.replace("wheat", "this product").replace("grain", "product")
     stock_cover = 12 * stock / supply if stock is not None and supply else None
     history = [{"year": int(key.split("|")[0]),
                 **{field: r.get(field) for field in FIELDS.values()},
@@ -173,7 +179,7 @@ def build_extension(cache: Path | None, legacy: dict):
                 y, iso = rowkey.split("|")
                 if int(y) != year:
                     continue
-                row = profile(iso, year, balance, trade)
+                row = profile(iso, year, balance, trade, perishable=meta.get("group") in ("animal", "fresh"))
                 if row is None:
                     continue
                 row["name"] = names.get(iso, iso)
