@@ -56,5 +56,13 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
+      # The artifacts API is eventually consistent: deploy-pages has twice
+      # read back "Found 0 artifact(s)" seconds after a successful upload, and
+      # its own error text says to retry later. A short wait costs nothing and
+      # removes the common case. This matters more than it looks: the refresh
+      # runs four times a day unattended, so a deploy that fails silently
+      # leaves the site showing stale figures with nobody told.
+      - name: Let the uploaded artifact become visible to the Pages API
+        run: sleep 15
       - id: deployment
         uses: actions/deploy-pages@v4
