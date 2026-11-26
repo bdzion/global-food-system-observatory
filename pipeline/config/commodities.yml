@@ -10,6 +10,7 @@ commodities:
   rice:
     name: Milled rice
     item_code: "31"
+    price_id: rice_price
     role: Staple food; excludes paddy, husked and broken rice
   rice_paddy:
     name: Rice paddy
@@ -23,6 +24,7 @@ commodities:
   soybeans:
     name: Soybeans
     item_code: "236"
+    price_id: soybean_price
     role: Oilseed and feed processing; excludes oil and meal
 
   # Exact product forms. These are candidate mappings until the real
@@ -30,11 +32,13 @@ commodities:
   barley:
     name: Barley
     item_code: "44"
+    price_id: barley_price
     group: staples
     role: Food, feed and industrial uses
   sorghum:
     name: Sorghum
     item_code: "83"
+    price_id: sorghum_price
     group: staples
     role: Climate-resilient staple and feed
   millet:
@@ -45,11 +49,13 @@ commodities:
   palm_oil:
     name: Palm oil
     item_code: "257"
+    price_id: palm_oil_price
     group: oils
     role: Edible oil and industrial uses; excludes palm fruit
   soybean_oil:
     name: Soybean oil
     item_code: "237"
+    price_id: soybean_oil_price
     group: oils
     role: Edible oil; excludes whole soybeans and meal
   rapeseed:
