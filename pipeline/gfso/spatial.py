@@ -8,7 +8,8 @@ from shapely import contains_xy
 from shapely.geometry import shape
 from . import core, SCHEMA_VERSION
 
-URL="https://psl.noaa.gov/thredds/fileServer/Datasets/gpcp/precip.mon.mean.nc"
+URL="https://downloads.psl.noaa.gov/Datasets/gpcp/precip.mon.mean.nc"
+MIRROR="https://psl.noaa.gov/thredds/fileServer/Datasets/gpcp/precip.mon.mean.nc"
 BOUNDARIES="https://raw.githubusercontent.com/nvkelso/natural-earth-vector/v5.1.2/geojson/ne_110m_admin_0_countries.geojson"
 
 def months_ending(y,m):
@@ -65,7 +66,10 @@ def gather(cache=None):
           "limitation":"Coarse global precipitation product; includes oceans and mixed coastal cells. Country statistics use area-weighted grid-centre inclusion, not exact boundary intersections or crop-weighting. At least three cells and 80% valid weighted coverage required. Percent anomaly withheld where normal is below 30 mm. Not drought classification, crop loss, irrigation availability or forecast. Recent GPCP estimates may be interim."}
     try:
         path=(cache or core.cache_dir())/"gpcp_monthly.nc"
-        core.fetch(URL,dest=path,timeout=90,attempts=1)
+        try:
+            core.fetch(URL,dest=path,timeout=90,attempts=1)
+        except core.SourceError:
+            core.fetch(MIRROR,dest=path,timeout=90,attempts=2)
         with Dataset(path) as ds:
             v=ds.variables["precip"]
             if v.units!="mm/day" or v.dimensions!=("time","lat","lon"):raise ValueError("Unexpected GPCP dimensions/units")
@@ -96,5 +100,6 @@ def gather(cache=None):
                 "period_start":f"{start[0]:04}M{start[1]:02}","period_end":f"{latest[0]:04}M{latest[1]:02}",
                 "latitude":lat.tolist(),"longitude":lon.tolist(),"anomaly_mm":clean_grid(diff),"anomaly_pct":clean_grid(ratio),
                 "valid_cells":int(np.isfinite(diff).sum()),"countries":countries}
-    except (core.SourceError,ValueError,KeyError,TypeError,OSError,AttributeError,RuntimeError):
+    except (core.SourceError,ValueError,KeyError,TypeError,OSError,AttributeError,RuntimeError) as exc:
+        print("GPCP spatial evidence:",type(exc).__name__,core.sanitize(str(exc)),flush=True)
         return {**base,"status":"unavailable","countries":{}}

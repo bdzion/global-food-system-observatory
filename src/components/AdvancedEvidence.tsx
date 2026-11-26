@@ -22,6 +22,7 @@ export function SpatialEvidence({release,geo}:{release:Release;geo:string}){
  const limit=metric==="anomaly_pct"?[ -50,-25,-10,10,25,50 ]:[-150,-75,-25,25,75,150];
  const color=(v:number|null)=>v==null?"#a8adb5":colors[limit.findIndex(t=>v<t)<0?6:limit.findIndex(t=>v<t)];
  const country=s?.countries[geo], active=s?.countries[focus||geo];
+ useEffect(()=>setFocus(""),[geo]);
  const grid=s?.[metric];const lat=s?.latitude,lon=s?.longitude;
  return <section className="visual-panel"><p className="commodity-kicker">Global spatial analysis · environmental screening</p><h2>Three-month precipitation anomaly</h2>
  {!s||s.status!=="available"?<p>{error||(!s?"Global grid not present in this data release.":"Provider grid unavailable; no anomaly is inferred.")}</p>:<><p>{s.period_start}–{s.period_end} compared with 1991–2020 · {s.valid_cells?.toLocaleString()} valid grid cells · <a href={s.url}>{s.source}</a></p><label>Map indicator<select value={metric} onChange={e=>setMetric(e.target.value as typeof metric)}><option value="anomaly_pct">Percent departure from normal</option><option value="anomaly_mm">Absolute departure (mm)</option></select></label>
