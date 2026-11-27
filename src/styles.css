@@ -28,7 +28,7 @@
   --unknown-soft: #f0efed;
   --focus: #1f6f78;
 
-  --measure: 68ch;
+  --measure: 78ch;
   --radius: 10px;
   --gap: 1.25rem;
 }
@@ -467,7 +467,14 @@ main{max-width:1280px}
 .missing-swatch{background:repeating-linear-gradient(135deg,#d7dbe0 0 3px,#a6afb9 3px 4px)}
 .map-readout{padding:.55rem .75rem;border-left:3px solid var(--accent);background:var(--accent-soft);font-size:.9rem;max-width:none}
 .visual-grid,.source-grid,.pathway-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,21rem),1fr));gap:.85rem}
-.rank-row{display:grid;grid-template-columns:minmax(70px,1.2fr) minmax(35px,1fr) auto;gap:.5rem;align-items:center;margin:.5rem 0;font-size:.83rem}
+/* One grid for the whole chart, not one per row. Each row used to size its
+   own columns, so a long value label pushed that row's bar track sideways
+   and the bars no longer shared a baseline — which is the one thing a bar
+   chart has to get right. `display:contents` lets every row's cells sit in
+   the parent grid, so all tracks start and end at the same x. */
+.ranked-bars{display:grid;grid-template-columns:minmax(70px,1.2fr) minmax(35px,1fr) max-content;gap:.45rem .5rem;align-items:center;font-size:.83rem}
+.rank-row{display:contents}
+.ranked-bars>.rank-row>strong{text-align:right;font-variant-numeric:tabular-nums}
 .rank-label{text-align:left;overflow-wrap:anywhere}
 button.rank-label{border:0;background:none;color:var(--accent);font:inherit;text-decoration:underline;cursor:pointer;padding:0}
 .rank-track{height:.68rem;background:var(--line);border-radius:3px;overflow:hidden}
@@ -483,7 +490,7 @@ button.rank-label{border:0;background:none;color:var(--accent);font:inherit;text
 .pathway-flow span{padding:.45rem;background:var(--accent-soft);border-radius:6px;font-size:.82rem;flex:1}
 .source-tile summary{cursor:pointer;font-weight:650}
 .commodity-filter input[type=search]{display:block;width:100%;font:inherit;padding:.5rem;background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:6px}
-@media(max-width:560px){.rank-row{grid-template-columns:1fr auto}.rank-track{grid-row:2;grid-column:1/-1}.visual-head label{width:100%}.brand-row{gap:.4rem}.data-strip>div{gap:.2rem .6rem}}
+@media(max-width:560px){.ranked-bars{grid-template-columns:1fr max-content}.rank-track{grid-column:1/-1}.visual-head label{width:100%}.brand-row{gap:.4rem}.data-strip>div{gap:.2rem .6rem}}
 
 .intelligence .commodity-filter select,.intelligence .visual-panel select{display:block;width:100%;min-height:44px;font:inherit;padding:.45rem;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:6px}.intelligence .visual-panel h3{margin:.4rem 0}.intelligence .commodity-value{font-size:1.7rem}.intelligence .visual-grid{align-items:stretch}.intelligence .visual-panel{margin:.55rem 0}.intelligence .figure-note{max-width:75ch}
 
@@ -581,3 +588,20 @@ button.rank-label{border:0;background:none;color:var(--accent);font:inherit;text
    built for, or the numbers crowd their own captions. */
 .overview-strip strong { font-size: 1.55rem; }
 .overview-strip span { font-size: 0.93rem; }
+
+/* The overview's opening band.
+ *
+ * On a wide screen the argument alone left most of the page empty to the
+ * right, because prose is capped at a readable measure while the container is
+ * not. Rather than stretching the text past the point where it is comfortable
+ * to read, the live figures move into that space and the page gains a second
+ * column of content. Below 1100px the two stack and nothing is lost. */
+.overview-hero { display: grid; gap: 1.75rem; align-items: start; }
+@media (min-width: 1100px) {
+  .overview-hero { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 2.75rem; }
+  .overview-now { position: sticky; top: 1rem; }
+  .overview-now .reader-counts { grid-template-columns: 1fr; gap: 0.6rem; }
+  .overview-now .reader-counts article { padding: 0.8rem 0.95rem; }
+  .overview-now .overview-strip strong { font-size: 1.35rem; }
+  .overview-now h2 { margin-top: 0; }
+}

@@ -16,6 +16,20 @@ const METRICS: Record<Metric, { label: string; unit: string }> = {
 };
 const fmt = (v: number) => new Intl.NumberFormat("en", { maximumFractionDigits: 2 }).format(v);
 const val = (v: number | null | undefined, unit = "") => v == null ? "Not available" : fmt(v) + (unit ? " " + unit : "");
+/* Bar labels are read at a glance and sit beside the bar they describe, so
+ * they are rounded. Two decimal places of a tonne is noise, and the varying
+ * label width was what knocked the bar tracks out of alignment. */
+const barVal = (v: number, unit: string) => {
+  if (unit === "t") return compactTonnes(v);
+  return fmt(Number(v.toPrecision(3))) + (unit ? " " + unit : "");
+};
+const compactTonnes = (v: number) => {
+  const a = Math.abs(v);
+  if (a >= 1e9) return (v / 1e9).toFixed(1) + " bn t";
+  if (a >= 1e6) return (v / 1e6).toFixed(1) + "M t";
+  if (a >= 1e3) return Math.round(v / 1e3).toLocaleString("en-CA") + "k t";
+  return Math.round(v).toLocaleString("en-CA") + " t";
+};
 const COLORS = ["#e2edf6","#b8d4e9","#78add1","#397db0","#174d7d"];
 
 export function mapBin(value: number | null | undefined, max: number): number {
@@ -77,11 +91,37 @@ export function RankedBars({title, rows, unit, onSelect}: {title:string; rows:{i
   const max=Math.max(0,...rows.map(r=>r.value));
   return <section className="visual-panel"><h3>{title}</h3>{rows.length? <div className="ranked-bars">{rows.map(r=><div className="rank-row" key={r.id}>
     {onSelect?<button className="rank-label" onClick={()=>onSelect(r.id)}>{r.name}</button>:<span className="rank-label">{r.name}</span>}
-    <div className="rank-track" aria-hidden="true"><span style={{width:(max>0?100*r.value/max:0)+"%"}}/></div><strong>{val(r.value,unit)}</strong>
+    <div className="rank-track" aria-hidden="true"><span style={{width:(max>0?100*r.value/max:0)+"%"}}/></div><strong>{barVal(r.value,unit)}</strong>
   </div>)}</div>:<p>No observations available.</p>}</section>;
 }
 
 type Point={period:string;value:number|null};
+
+/* Round numbers for the y-axis.
+ *
+ * The axis used to label simple fractions of the data maximum, which produced
+ * gridlines at 130.6, 261.2, 391.7 and 522.3. Nobody reads a chart against
+ * 391.7. This picks a step of 1, 2, 2.5 or 5 times a power of ten, then
+ * extends the scale to a round number so the top gridline sits at the top of
+ * the plot rather than wherever the largest observation happened to fall. */
+function niceScale(min: number, max: number, target = 4) {
+  if (!Number.isFinite(min) || !Number.isFinite(max) || max <= min) {
+    return { lo: min, hi: max || 1, ticks: [min, max || 1] };
+  }
+  const raw = (max - min) / target;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10) * mag;
+  const lo = Math.floor(min / step) * step;
+  const hi = Math.ceil(max / step) * step;
+  const ticks: number[] = [];
+  // Guard the loop against a step that floating point has made unusable.
+  for (let v = lo, i = 0; v <= hi + step / 2 && i < 40; v += step, i++) {
+    ticks.push(Number(v.toFixed(10)));
+  }
+  return { lo, hi, ticks };
+}
+
 export function SeriesChart({title,series,unit}: {title:string;series:{name:string;points:Point[]}[];unit:string}) {
   const [active,setActive]=useState<string|null>(null);
   const observed=[...new Set(series.flatMap(s=>s.points.map(p=>p.period)))].sort();
@@ -91,18 +131,20 @@ export function SeriesChart({title,series,unit}: {title:string;series:{name:stri
   const periods=(monthly||yearly)&&idx(observed[observed.length-1])-idx(observed[0])<1000?Array.from({length:idx(observed[observed.length-1])-idx(observed[0])+1},(_,i)=>{const n=idx(observed[0])+i;return monthly?Math.floor(n/12)+"M"+String(n%12+1).padStart(2,"0"):String(n)}):observed;
   const values=series.flatMap(s=>s.points.map(p=>p.value)).filter((v):v is number=>v!=null&&Number.isFinite(v));
   if(!values.length||!periods.length)return <section className="visual-panel"><h3>{title}</h3><p>No observations available.</p></section>;
-  const min=Math.min(0,...values), max=Math.max(0,...values);
+  const raw={min:Math.min(0,...values),max:Math.max(0,...values)};
+  const {lo,hi,ticks}=niceScale(raw.min,raw.max);
   const x=(i:number)=>65+i*555/Math.max(1,periods.length-1);
-  const y=(v:number)=>180-(v-min)/(max-min||1)*150;
+  const y=(v:number)=>180-(v-lo)/(hi-lo||1)*150;
   const palette=["#276ca6","#bd6a29","#288064","#8255a6","#9e3b61","#76802e"];
   const chosen=active&&periods.includes(active)?active:periods[periods.length-1];
   return <section className="visual-panel"><h3>{title}</h3>
     <svg viewBox="0 0 650 215" className="evidence-chart" role="img" aria-label={title+"; "+unit+"; values also available in the tables"}>
-      {[0,.25,.5,.75,1].map(f=>{const v=min+(max-min)*f;return <g key={f}><line x1="65" x2="620" y1={y(v)} y2={y(v)} stroke="var(--line)"/><text x="59" y={y(v)+4} textAnchor="end" fontSize="10" fill="currentColor">{new Intl.NumberFormat("en",{notation:"compact",maximumFractionDigits:1}).format(v)}</text></g>})}
+      {ticks.map(v=><g key={v}><line x1="65" x2="620" y1={y(v)} y2={y(v)} stroke="var(--line)"/><text x="59" y={y(v)+4} textAnchor="end" fontSize="10" fill="currentColor">{new Intl.NumberFormat("en",{notation:"compact",maximumFractionDigits:1}).format(v)}</text></g>)}
       {series.map((s,si)=>{const lookup=new Map(s.points.map(p=>[p.period,p.value]));let paths:string[]=[];let d="";periods.forEach((p,i)=>{const v=lookup.get(p);if(v==null||!Number.isFinite(v)){if(d)paths.push(d);d="";return;}d+=(d?" L":"M")+x(i)+","+y(v);});if(d)paths.push(d);return <g key={s.name}>{paths.map((path,i)=><path key={i} d={path} stroke={palette[si%palette.length]} strokeWidth="2.5" fill="none"/>)}{periods.map((p,i)=>{const v=lookup.get(p);return v==null?null:<circle key={p} cx={x(i)} cy={y(v)} r={p===chosen?4:2} fill={palette[si%palette.length]}><title>{s.name} · {monthWords(p)}: {val(v,unit)}</title></circle>})}</g>})}
+      {unit?<text x="65" y="18" fontSize="10" fill="currentColor" opacity="0.75">{unit}</text>:null}
       {periods.map((p,i)=>(i===0||i===periods.length-1||i%Math.max(1,Math.ceil(periods.length/5))===0)?<text key={p} x={x(i)} y="202" textAnchor="middle" fontSize="10" fill="currentColor">{monthShort(p)}</text>:null)}
     </svg>
-    <div className="map-legend">{series.map((s,i)=><span key={s.name}><i style={{background:palette[i%palette.length]}}/>{s.name}</span>)}</div>
+    {series.length>1&&<div className="map-legend">{series.map((s,i)=><span key={s.name}><i style={{background:palette[i%palette.length]}}/>{s.name}</span>)}</div>}
     <label>Inspect month<select value={chosen} onChange={e=>setActive(e.target.value)}>{periods.map(p=><option key={p} value={p}>{monthWords(p)}</option>)}</select></label>
     <p className="map-readout" aria-live="polite">{monthWords(chosen)}: {series.map(s=>s.name+" "+val(s.points.find(p=>p.period===chosen)?.value,unit)).join(" · ")}</p>
   </section>;
