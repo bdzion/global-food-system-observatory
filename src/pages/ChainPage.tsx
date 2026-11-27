@@ -150,7 +150,7 @@ export function ChainPage({ release }: { release: Release }) {
         rows={world.exporters}
         rowKey={(e) => e.iso3}
       />
-      <Source name="FAO supply and utilisation accounts" period={String(world.year)} />
+      <Source name="FAO supply and use accounts" period={String(world.year)} />
 
       <h2>The whole chain, for one country</h2>
       <p>

@@ -3,12 +3,12 @@ import type { Release } from "../lib/types";
 import { hasFile, readVerified } from "../lib/data";
 import { ageWords, dateWords } from "../lib/format";
 
-/* What other organisations are reporting now.
+/* What other organizations are reporting now.
  *
  * Everything else on this site measures structure, and the trade figures
  * behind it are a year or more old. This panel answers the different question
  * a reader actually arrives with — is something happening at the moment — by
- * pointing at the organisations whose job that is.
+ * pointing at the organizations whose job that is.
  *
  * It shows titles and links, never the reports themselves. That is partly a
  * licence matter and partly an honest one: these are other people's
@@ -110,7 +110,7 @@ export function ReportStream({
     <section className="visual-panel">
       <h2>{heading}</h2>
       <p>
-        These are assessments published by other organisations, not by us. We
+        These are assessments published by other organizations, not by us. We
         list the title and link to the original; we do not reproduce the
         reports. A report appearing here is not a warning, and nothing
         appearing here is not reassurance.
@@ -127,7 +127,7 @@ export function ReportStream({
       {ordered.length === 0 ? (
         <p className="reader-explainer">
           {forCountry
-            ? `Nothing about ${countryName || "this country"} appeared in the food and agriculture reports we searched when this snapshot was built. That means no organisation filed one under this country in that window, which is not the same as nothing happening.`
+            ? `Nothing about ${countryName || "this country"} appeared in the food and agriculture reports we searched when this snapshot was built. That means no organization filed one under this country in that window, which is not the same as nothing happening.`
             : "No reports came back when this snapshot was built."}
         </p>
       ) : (
@@ -166,7 +166,7 @@ export function ReportStream({
 
       <p className="figure-note">
         Collected from {data.source.provider}&apos;s {data.source.dataset}, which
-        carries the published output of several thousand organisations,
+        carries the published output of several thousand organizations,
         including the Famine Early Warning Systems Network, the Integrated Food
         Security Phase Classification, FAO and the World Food Programme.
         Searched for food and agriculture reports only.{" "}

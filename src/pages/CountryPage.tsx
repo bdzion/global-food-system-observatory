@@ -87,7 +87,7 @@ export function CountryPage({ release, iso }: { release: Release; iso: string })
         />
       </div>
       <Source
-        name="FAO supply and utilisation accounts"
+        name="FAO supply and use accounts"
         period={String(wheat.year)}
         note="Published once a year, about a year after the period they cover."
       />

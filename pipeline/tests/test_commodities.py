@@ -148,3 +148,49 @@ def test_perishable_food_has_no_grain_style_stock_cover():
     assert row["opening_stocks_t"] is None
     assert row["estimated_cover_months"] is None
     assert "perishable" in row["stock_note"]
+
+
+def _product(exports, top_shares):
+    """A product whose exporters and supplier shares are set by hand."""
+    rows = {}
+    for i, (ex, share) in enumerate(zip(exports, top_shares)):
+        rows[f"C{i:02d}"] = {
+            "exports_t": ex,
+            "suppliers": [{"iso3": "XXX", "share_pct": share}] if share is not None else [],
+        }
+    return {"countries": rows}
+
+
+def test_concentration_counts_selling_and_buying_separately():
+    from gfso import commodities as c
+    # Selling concentrated (one seller has it all), buying spread thin.
+    sell_only = _product([100, 0, 0, 0, 0, 0], [10, 10, 10, 10, 10, 10])
+    # Selling spread across many, buying concentrated on one partner each.
+    buy_only = _product([10] * 20, [90] * 20)
+    out = c.concentration_summary({"a": sell_only, "b": buy_only})
+    assert out["foods_assessed"] == 2
+    assert out["foods_top5_sell_half"] == 1
+    assert out["foods_most_buyers_lean_on_one"] == 1
+
+
+def test_concentration_skips_foods_with_no_recorded_trade():
+    """Counting an untraded food as unconcentrated would flatter the picture."""
+    from gfso import commodities as c
+    out = c.concentration_summary({
+        "traded": _product([100, 0], [80, 80]),
+        "untraded": _product([0, 0], [80, 80]),
+    })
+    assert out["foods_assessed"] == 1
+    assert out["foods_top5_sell_half"] == 1
+
+
+def test_concentration_thresholds_are_the_ones_claimed_on_the_page():
+    """The page says 'five countries supply at least half' and 'two-thirds or
+    more of countries'. If either threshold drifts, the sentence is wrong."""
+    from gfso import commodities as c
+    assert c.TOP_SELLERS == 5
+    assert c.HALF == 50.0
+    assert abs(c.TWO_THIRDS - 66.666) < 0.01
+    # Exactly at the line counts as concentrated, as "at least" implies.
+    at_half = _product([50, 50, 0, 0, 0, 0, 0, 0, 0, 0], [None] * 10)
+    assert c.concentration_summary({"x": at_half})["foods_top5_sell_half"] == 1

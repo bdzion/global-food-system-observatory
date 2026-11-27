@@ -55,6 +55,9 @@ export function Overview({ release, route }: { release: Release; route: Route })
 
   const coverage = release.manifest.coverage as unknown as Record<string, number | undefined>;
   const foods = coverage.product_forms;
+  const foodsAssessed = coverage.foods_assessed;
+  const sellHalf = coverage.foods_top5_sell_half;
+  const leanOnOne = coverage.foods_most_buyers_lean_on_one;
   const countries = coverage.countries_profiled;
 
   // "This week" is counted from the reports themselves, not from when the
@@ -70,18 +73,61 @@ export function Overview({ release, route }: { release: Release; route: Route })
     <section className="reader-guide">
       <h1>Overview</h1>
       <p className="reader-headline">
-        A food shortage can begin far from the people who feel it.
+        The world grows enough food — and moves it through a handful of
+        countries.
       </p>
       <p className="lede">
-        This site brings together published figures on who buys food from whom,
-        what it costs, and what would happen if a supplier stopped. It is built
-        for officials who have to form a view quickly and show their working
-        afterwards.
+        Global production has never been higher, and hunger has not fallen with
+        it. Growing food and getting it to people are different problems. This
+        site measures the second one: who depends on whom, how thin the cushion
+        is, and what happens when a supplier stops.
+      </p>
+      <p>Nothing here is an alert and nothing here is a forecast.</p>
+
+      <h2>Why this is fragile</h2>
+      <p>
+        <strong>Enough food is grown.</strong> The world produces more than
+        enough to feed everyone, and has for decades. Hunger persists because
+        of poverty, price and distribution, not because the harvest is too
+        small.
       </p>
       <p>
-        Nothing here is an alert and nothing here is a forecast. It is a
-        research tool: it shows what the published figures say, and where they
-        stop.
+        <strong>Few countries sell it.</strong> For{" "}
+        {sellHalf ?? "\u2014"} of the {foodsAssessed ?? "\u2014"} foods on this
+        site, five countries supply at least half of everything exported. Rice
+        is 86 per cent from India, Thailand, Vietnam, Pakistan and the United
+        States. Soybeans are 94 per cent from five.
+      </p>
+      <p>
+        <strong>Most buyers have no second option.</strong> In{" "}
+        {leanOnOne ?? "\u2014"} of those {foodsAssessed ?? "\u2014"} foods,
+        two-thirds or more of countries take at least half their supply from a
+        single partner. A country in that position has nobody else to call.
+      </p>
+      <p>
+        <strong>What stands between a shock and a crisis is a buffer.</strong>{" "}
+        Grain in store. A supplier with spare capacity. Money to pay a higher
+        price. A program that can move in weeks rather than months. Shocks
+        are certain: harvests fail, routes close, governments ban exports.
+        Crises are not certain, and the difference is usually what sat behind
+        the shock.
+      </p>
+      <p>
+        The next disruption may not begin with the weather. An export ban is a
+        decision, and a decision can take effect in a week. Acting before a
+        shortage is almost always cheaper than acting after it, and that gap is
+        the arithmetic{" "}
+        <a href={to("stress")}>the timelines page</a> helps you run.
+      </p>
+      <p className="figure-note">
+        Trade concentration is counted from the {foodsAssessed ?? "\u2014"} foods
+        in this release, using the most recent year with complete figures. That
+        production is sufficient in total, and that hunger follows poverty and
+        distribution rather than scarcity, are the{" "}
+        <a href="https://www.fao.org/hunger/en/" target="_blank" rel="noopener noreferrer">
+          position of the Food and Agriculture Organization
+        </a>
+        , not a finding of ours.
       </p>
 
       <h2>Where things stand today</h2>
@@ -98,8 +144,8 @@ export function Overview({ release, route }: { release: Release; route: Route })
           <strong>{thisWeek ?? "—"}</strong>
           <span>
             {thisWeek === null
-              ? "reports from other organisations are not in this snapshot."
-              : <>reports filed in the last seven days by {publishers} organisations, including FEWS NET, the IPC, FAO and WFP. <a href={to("watch")}>Read what they published</a></>}
+              ? "reports from other organizations are not in this snapshot."
+              : <>reports filed in the last seven days by {publishers} organizations, including FEWS NET, the IPC, FAO and WFP. <a href={to("watch")}>Read what they published</a></>}
           </span>
         </article>
         <article>
@@ -155,7 +201,7 @@ export function Overview({ release, route }: { release: Release; route: Route })
             "Where a country gets its food, how much comes from one supplier, and what it holds in store.",
             `${foods ?? "—"} foods · ${countries ?? "—"} countries`],
           ["03", "The threats", "watch",
-            "What has changed recently in prices, weather and hazards, and what other organisations are reporting.",
+            "What has changed recently in prices, weather and hazards, and what other organizations are reporting.",
             `${moving.length} prices moving · ${reports?.count ?? "—"} reports`],
           ["04", "Possible timelines", "stress",
             "If a supplier stopped, how long the stocks would last and what acting early would be worth.",

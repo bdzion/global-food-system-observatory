@@ -127,7 +127,7 @@ export function Countries({ release }: { release: Release }) {
         empty="No country matches that search."
       />
       <Source
-        name="FAO supply and utilisation accounts and detailed trade matrix"
+        name="FAO supply and use accounts and detailed trade matrix"
         period={String(release.countries.year)}
         note="Published once a year, about a year after the period they cover."
       />

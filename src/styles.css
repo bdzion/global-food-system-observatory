@@ -561,7 +561,7 @@ button.rank-label{border:0;background:none;color:var(--accent);font:inherit;text
 }
 .report-stream button.reader-next { cursor: pointer; font: inherit; font-weight: 650; }
 
-/* The platform comparison. The organisation that runs each platform matters as
+/* The platform comparison. The organization that runs each platform matters as
    much as its name — a reader deciding whether to trust a figure wants to know
    whose it is — so it sits under the name rather than in a column of its own. */
 .landscape-run { display: block; font-weight: 400; font-size: 0.84rem; color: var(--ink-soft); margin-top: 0.15rem; }

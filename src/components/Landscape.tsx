@@ -8,7 +8,7 @@
  *
  * Everything here is editorial, not computed, and it is written down rather
  * than fetched so that it can be read and corrected. Each entry links to the
- * platform so a reader can check the characterisation. */
+ * platform so a reader can check the characterization. */
 
 interface Platform {
   name: string;
@@ -77,7 +77,7 @@ export function Landscape() {
     <section className="visual-panel">
       <h2>What else to look at, and when this site is the wrong tool</h2>
       <p>
-        Several organisations publish food-system monitoring, and most of them
+        Several organizations publish food-system monitoring, and most of them
         are older and better resourced than this site. They answer different
         questions. If you need any of the things in the last column below, go
         to the platform that provides it.
@@ -137,7 +137,7 @@ export function Landscape() {
       </p>
       <p className="figure-note">
         This comparison is our reading of each platform, not theirs. If you
-        think we have mischaracterised one, the contact details are at the
+        think we have mischaracterized one, the contact details are at the
         bottom of this page.
       </p>
     </section>

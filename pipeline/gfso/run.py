@@ -139,6 +139,9 @@ def publish(release: dict, out: Path, release_id: str) -> dict:
             "assumptions_broken": release["ledger"]["broken_count"],
             "product_forms": len(release.get("commodity-index",{}).get("coverage",{})),
             "product_country_profiles": sum(c["countries"] for c in release.get("commodity-index",{}).get("coverage",{}).values()),
+            # Quoted on the overview to make its central point, so it travels
+            # in the manifest rather than behind a 1.3 MB index fetch.
+            **(release.get("commodity-index", {}).get("concentration") or {}),
         },
     }
     core.write_json(out / "manifest.json", manifest)

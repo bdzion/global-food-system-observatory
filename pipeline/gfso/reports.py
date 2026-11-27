@@ -1,13 +1,13 @@
-"""What other organisations are reporting right now.
+"""What other organizations are reporting right now.
 
 The rest of this pipeline measures structure: who buys food from whom, how
 concentrated that is, whether a price has moved unusually. Structure moves
 slowly and the trade figures behind it are a year or more old, so a reader
 asking "is something happening *now*" gets no answer from it.
 
-This module fills that gap by pointing at the organisations whose job it is to
+This module fills that gap by pointing at the organizations whose job it is to
 answer that question. ReliefWeb is the UN's humanitarian content exchange; it
-carries the published output of roughly five thousand organisations, including
+carries the published output of roughly five thousand organizations, including
 the Famine Early Warning Systems Network, the Integrated Food Security Phase
 Classification, FAO and the World Food Programme. Filtering its feeds to food
 and agriculture gives us their current assessments without a separate
@@ -41,7 +41,7 @@ DOC = "https://apidoc.reliefweb.int/"
 # Each query is a separate request. They overlap on purpose: the first two pull
 # the named early-warning products a decision-maker would be asked about by
 # name, and the last two catch everything else food-related, including reports
-# from organisations we have not thought to list.
+# from organizations we have not thought to list.
 QUERIES = [
     ("early_warning", 'source.name:"Famine Early Warning System Network"'),
     ("early_warning", 'source.name:("Integrated Food Security Phase Classification" OR "Food Security and Nutrition Analysis Unit")'),
@@ -235,7 +235,7 @@ def gather() -> dict:
             "redistribution": "link_only",
             "note": (
                 "Titles and links only. ReliefWeb asks readers to go to the "
-                "publishing organisation for the content itself."
+                "publishing organization for the content itself."
             ),
         },
         "queries_run": len(QUERIES),

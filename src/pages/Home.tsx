@@ -145,7 +145,7 @@ export function Home({ release }: { release: Release }) {
         ))}
       </div>
       <Source
-        name="FAO detailed trade matrix and supply and utilisation accounts"
+        name="FAO detailed trade matrix and supply and use accounts"
         period={`${countries.year}, the latest year with full figures`}
       />
 

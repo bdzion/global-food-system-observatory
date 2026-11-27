@@ -27,7 +27,7 @@ const FLAG_WORDS: Record<string, string> = {
   A: "Reported by the country",
   E: "Estimated by FAO",
   I: "Filled in from the trading partner's figures",
-  X: "Supplied by another organisation",
+  X: "Supplied by another organization",
 };
 const sourceWords = (note: string | undefined) => {
   if (!note) return "No source given";

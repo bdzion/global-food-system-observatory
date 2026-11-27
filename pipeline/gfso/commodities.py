@@ -216,6 +216,7 @@ def build_extension(cache: Path | None, legacy: dict):
     return {
         "schema_version": SCHEMA_VERSION, "extension_version": 1,
         "products": products,
+        "concentration": concentration_summary(products),
         "sources": SOURCE_URLS,
         "provider_updated": {code: extract._dataset_date(domain, cache)
                              for code, domain in (("FAO-SUA", "SCL"), ("FAO-TM", "TM"), ("FAO-CP", "CP"), ("FAO-CAHD", "CAHD"))},
@@ -258,3 +259,49 @@ def checks(extension):
             if row["gross_import_share_pct"] is not None and row["apparent_supply_t"] is None:
                 problems.append(f"{key}/{iso}: import share without denominator")
     return problems
+
+
+# How concentrated the world's food trade is, across every food in the release.
+#
+# The overview quotes these two counts to make its central point, and the point
+# is only worth making if the numbers stay true as the data are revised. They
+# are small enough to ride in the manifest, so the landing page does not have
+# to pull the 1.3 MB commodity index to state them.
+TOP_SELLERS = 5
+HALF = 50.0
+TWO_THIRDS = 200.0 / 3.0
+
+
+def concentration_summary(products: dict) -> dict:
+    """Count the foods whose selling, and whose buying, is concentrated.
+
+    A food counts as concentrated on the selling side when the five largest
+    exporters account for at least half of all recorded exports, and on the
+    buying side when at least two-thirds of countries take half or more of
+    their supply from one partner. Foods with no recorded exports are skipped
+    rather than counted as unconcentrated, which would flatter the picture.
+    """
+    sell = buy = total = 0
+    for product in (products or {}).values():
+        rows = list((product.get("countries") or {}).values())
+        if not rows:
+            continue
+        exports = sorted((r.get("exports_t") or 0) for r in rows)
+        traded = sum(exports)
+        if traded <= 0:
+            continue
+        total += 1
+        if 100.0 * sum(exports[-TOP_SELLERS:]) / traded >= HALF:
+            sell += 1
+        leaning = sum(
+            1 for r in rows
+            if (r.get("suppliers") or [{}])[0].get("share_pct", 0) >= HALF
+        )
+        if 100.0 * leaning / len(rows) >= TWO_THIRDS:
+            buy += 1
+    return {
+        "foods_assessed": total,
+        "foods_top5_sell_half": sell,
+        "foods_most_buyers_lean_on_one": buy,
+        "top_sellers_counted": TOP_SELLERS,
+    }
